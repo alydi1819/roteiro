@@ -1366,16 +1366,21 @@ function rmVisitTicket(di,vi){trips[cur].days[di].visits[vi].ticketName='';trips
    TRANSPORT
 ═══════════════════════════════════════════ */
 function saveTrLocal(di,key){
-  // Read all values from DOM first, before any re-render
-  const descVal=document.getElementById('trDesc_'+di+'_'+key)?.value||'';
-  const valVal=document.getElementById('trVal_'+di+'_'+key)?.value||'';
-  const cmtVal=document.getElementById('trCmt_'+di+'_'+key)?.value||'';
+  const descEl=document.getElementById('trDesc_'+di+'_'+key);
+  const valEl=document.getElementById('trVal_'+di+'_'+key);
+  const cmtEl=document.getElementById('trCmt_'+di+'_'+key);
+  console.log('[saveTrLocal] di='+di+' key='+key);
+  console.log('[saveTrLocal] cmtEl=', cmtEl, 'value=', cmtEl?.value);
+  const descVal=descEl?.value||'';
+  const valVal=valEl?.value||'';
+  const cmtVal=cmtEl?.value||'';
   const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);
-  if(idx<0)return;
+  console.log('[saveTrLocal] idx='+idx+' cmtVal='+cmtVal);
+  if(idx<0){console.log('[saveTrLocal] idx not found!');return;}
   trips[cur].days[di].transports[idx].desc=descVal;
   trips[cur].days[di].transports[idx].value=valVal;
   trips[cur].days[di].transports[idx].comment=cmtVal;
-  // Flush save immediately (bypass debounce)
+  console.log('[saveTrLocal] transport after update:', JSON.stringify(trips[cur].days[di].transports[idx]));
   clearTimeout(_saveTimer);
   const day=trips[cur].days[di];
   sb.from('trip_days').update({
@@ -1384,7 +1389,10 @@ function saveTrLocal(di,key){
     hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',
     hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:day.hotelAttachData||'',
     notes:day.notes||'',open_tr_key:day._openTrKey||'',foods:day.foods||[]
-  }).eq('id',day.id).then(({error})=>{if(error)toast('Erro ao salvar');});
+  }).eq('id',day.id).then(({error,data})=>{
+    console.log('[saveTrLocal] supabase result error=',error,'data=',data);
+    if(error)toast('Erro ao salvar: '+error.message);
+  });
   toast('Transporte salvo!');
   renderDay();
 }
@@ -1862,4 +1870,34 @@ async function startApp(user){
   showMain();
   switchTab('home');
   // Apply pending invite code if any
-  if(
+  if(window._pendingInviteCode){
+    const code=window._pendingInviteCode;
+    window._pendingInviteCode=null;
+    setTimeout(()=>applyInviteCode(code),1000);
+  }
+}
+
+sb.auth.onAuthStateChange((event,session)=>{
+  console.log('Auth event:',event);
+  if(event==='SIGNED_IN'&&session){
+    startApp(session.user);
+  } else if(event==='SIGNED_OUT'){
+    currentUser=null;currentProfile=null;trips=[];cur=null;
+    if(realtimeSub){sb.removeChannel(realtimeSub);realtimeSub=null;}
+    hideLoading();showAuth();
+  }
+});
+
+// Check session on load
+sb.auth.getSession().then(({data:{session}})=>{
+  if(session){
+    startApp(session.user);
+  } else {
+    hideLoading();
+    showAuth();
+  }
+});
+
+</script>
+</body>
+</html>
