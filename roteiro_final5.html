@@ -1088,7 +1088,7 @@ function renderDay(){
         <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${vi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
         <div class="v-name-big">${v.name||'Novo local'}</div>
         <i class="ti ti-chevron-up" style="font-size:15px;color:var(--blue2)"></i>
-        <button class="rm-btn" onclick="event.stopPropagation();rmVisit(${di},${vi})"><i class="ti ti-x"></i></button>
+        <button class="rm-btn" onclick="event.stopPropagation();rmVisit(${di},${vi})" title="Excluir local" style="color:var(--red)"><i class="ti ti-trash"></i></button>
       </div>
       <div class="visit-expanded-body">
         <input class="visit-name-edit" id="vname_${di}_${vi}" value="${v.name||''}" placeholder="Nome do local" oninput="updVisit(${di},${vi},'name',this.value)">
