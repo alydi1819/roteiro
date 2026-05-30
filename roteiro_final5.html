@@ -373,7 +373,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .comment-toggle-btn.has-comment{border-color:#F59E0B;color:#D97706;background:#FFFBEB}
 .comment-panel{margin-top:8px;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:var(--radius-sm);padding:10px 12px}
 [data-theme="dark"] .comment-panel{background:#2D2000;border-color:#78420A}
-.comment-panel textarea{width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text);resize:none;outline:none;min-height:72px;line-height:1.5}
+.comment-panel textarea{width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text);resize:none;outline:none;min-height:60px;overflow:hidden;field-sizing:content;line-height:1.5}
 .comment-panel-footer{display:flex;justify-content:flex-end;margin-top:6px;border-top:1px solid #FCD34D;padding-top:6px}
 .comment-save-btn{background:#F59E0B;color:#fff;border:none;border-radius:7px;padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px}
 .comment-save-btn:hover{background:#D97706}
@@ -1103,7 +1103,7 @@ function renderDay(){
         <div class="field-label">LOCALIZAÇÃO</div>
         ${buildLocSearch('visit_'+di+'_'+vi,v.lat,v.lng,v.locName||v.name)}
         <div class="field-label">INGRESSO</div>
-        ${v.ticketName?`<div class="attach-file" onclick="viewAttach('${v.ticketData}','${v.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
+        ${v.ticketName?`<div class="attach-file" onclick="viewAttach('${v.ticketData||''}','${v.ticketName}',trips[cur].days[di].id,'visit_'+${vi}+'_ticket')"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
         <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${vi},this)"></label>
         <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${vi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
         ${di<trips[cur].days.length-1?`<button onclick="moveVisitToNextDay(${di},${vi})" style="width:100%;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Passar pro dia ${trips[cur].days[di+1].num}</button>`:''}
@@ -1329,36 +1329,44 @@ function attachHotel(di,inp){
   };r.readAsDataURL(f);
 }
 function rmHotelAttach(di){trips[cur].days[di].hotelAttachName='';trips[cur].days[di].hotelAttachData='';save();renderDay();}
+function processAndSaveAttachment(data, fname, ftype, onDone){
+  if(ftype.startsWith('image/')){
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=800;let w=img.width,h=img.height;
+      if(w>max){h=h*(max/w);w=max;}if(h>max){w=w*(max/h);h=max;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      onDone(canvas.toDataURL('image/jpeg',0.7));
+    };img.src=data;
+  } else {onDone(data);}
+}
+async function saveAttachmentToDb(dayId, refKey, fname, data){
+  const{error}=await sb.from('trip_attachments').upsert(
+    {day_id:dayId, ref_key:refKey, file_name:fname, file_data:data},
+    {onConflict:'day_id,ref_key'}
+  );
+  if(error)console.error('attach save error:',error);
+}
+async function loadAttachmentFromDb(dayId, refKey){
+  const{data}=await sb.from('trip_attachments').select('file_data').eq('day_id',dayId).eq('ref_key',refKey).single();
+  return data?.file_data||null;
+}
 function attachVisitTicket(di,vi,inp){
   const f=inp.files[0];if(!f)return;
-  if(f.size>2*1024*1024){toast('Arquivo muito grande. Use menos de 2MB');return;}
+  if(f.size>5*1024*1024){toast('Arquivo muito grande. Use menos de 5MB');return;}
   const r=new FileReader();
   r.onload=e=>{
-    const data=e.target.result;
-    // Compress images, keep PDFs as-is
-    if(f.type.startsWith('image/')){
-      const img=new Image();
-      img.onload=()=>{
-        const canvas=document.createElement('canvas');
-        const max=800;
-        let w=img.width,h=img.height;
-        if(w>max){h=h*(max/w);w=max;}
-        if(h>max){w=w*(max/h);h=max;}
-        canvas.width=w;canvas.height=h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        const compressed=canvas.toDataURL('image/jpeg',0.7);
-        trips[cur].days[di].visits[vi].ticketName=f.name;
-        trips[cur].days[di].visits[vi].ticketData=compressed;
-        save();renderDay();
-      };
-      img.src=data;
-    } else {
+    processAndSaveAttachment(e.target.result,f.name,f.type,async(finalData)=>{
+      const dayId=trips[cur].days[di].id;
+      const refKey='visit_'+vi+'_ticket';
       trips[cur].days[di].visits[vi].ticketName=f.name;
-      trips[cur].days[di].visits[vi].ticketData=data;
-      save();renderDay();
-    }
-  };
-  r.readAsDataURL(f);
+      trips[cur].days[di].visits[vi].ticketData=finalData; // keep in memory for viewing
+      await saveAttachmentToDb(dayId,refKey,f.name,finalData);
+      save();renderDay();toast('Ingresso anexado!');
+    });
+  };r.readAsDataURL(f);
 }
 function rmVisitTicket(di,vi){trips[cur].days[di].visits[vi].ticketName='';trips[cur].days[di].visits[vi].ticketData='';save();renderDay();}
 
@@ -1717,7 +1725,7 @@ async function loadTripsDB(){
   for(const t of merged){
     const{data:drows}=await sb.from('trip_days').select('*').eq('trip_id',t.id).order('day_num');
     t.start=t.start_date;t.end=t.end_date;t.routes=t.routes||[];
-    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[],_openTrKey:d.open_tr_key||null,_notesLocked:localStorage.getItem('nl_'+d.id)==='1'}));
+    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:(d.visits||[]).map(v=>({...v,ticketData:v.ticketData||''})),transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[],_openTrKey:d.open_tr_key||null,_notesLocked:localStorage.getItem('nl_'+d.id)==='1'}));
   }
   trips=merged;
 }
@@ -1729,8 +1737,9 @@ function save(){
     const day=trips[cur]?.days[curDay];if(!day?.id)return;
     // Persist notesLocked in localStorage
     try{localStorage.setItem('nl_'+day.id, day._notesLocked?'1':'0');}catch(e){}
-    // Strip large base64 data from visits for saving (keep name only)
-    const visitsToSave=(day.visits||[]).map(v=>({...v}));
+    // Strip ticketData from visits/foods before saving to jsonb (stored in trip_attachments)
+    const visitsToSave=(day.visits||[]).map(v=>{const c={...v};delete c.ticketData;return c;});
+    const foodsToSave=(day.foods||[]).map(f=>{const c={...f};delete c.ticketData;return c;});
     const hotelData=day.hotelAttachData||'';
     sb.from('trip_days').update({
       title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',
@@ -1738,7 +1747,7 @@ function save(){
       hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:hotelData,
       transports:day.transports||[],visits:visitsToSave,
       transfers:day.transfers||[],notes:day.notes||'',open_tr_key:day._openTrKey||'',
-      foods:day.foods||[]
+      foods:foodsToSave
     }).eq('id',day.id)
     .then(({error})=>{if(error){console.error('save error:',error);toast('Erro ao salvar: '+error.message);}});
   },1200);
