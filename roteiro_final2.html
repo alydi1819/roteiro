@@ -1092,7 +1092,9 @@ function renderDay(){
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-notes"></i> Observações</h3>
       ${day._notesLocked?`<button class="cfg-btn" style="font-size:11px;padding:4px 10px" onclick="unlockNotes(${di})"><i class="ti ti-edit" style="font-size:13px"></i> Editar</button>`:`<button class="cfg-btn" style="font-size:11px;padding:4px 10px;background:var(--orange);color:#fff;border-color:var(--orange)" onclick="saveNotesDayLock(${di})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>`}
     </div>
-    <div class="day-card-body"><textarea class="notes-area" id="notesArea_${di}" ${day._notesLocked?'readonly style="background:var(--surface2);color:var(--text2);cursor:default;resize:none"':''} oninput="updDay(${di},'notes',this.value);autoResizeNotes(this)">${day.notes||''}</textarea></div></div>
+    <div class="day-card-body"><div class="notes-area notes-editable" id="notesArea_${di}"
+  ${day._notesLocked?'contenteditable="false" style="background:var(--surface2);color:var(--text2);cursor:default"':'contenteditable="true"'}
+  data-placeholder="Escreva suas observações aqui..." oninput="updDay(${di},'notes',this.innerText)">${day.notes||''}</div></div></div>
     ${trips[cur].days.length>1?`<button class="del-day-btn" onclick="deleteDay(${di})"><i class="ti ti-trash"></i> Remover este dia</button>`:''}`;
 }
 
@@ -1357,7 +1359,7 @@ function saveComment(di,vi){
 }
 function autoResizeNotes(el){
   el.style.height='auto';
-  el.style.height=el.scrollHeight+'px';
+  el.style.height=(el.scrollHeight+2)+'px';
 }
 // Auto-resize all notes areas after render
 function initNotesResize(){
@@ -1366,6 +1368,9 @@ function initNotesResize(){
   });
 }
 function saveNotesDayLock(di){
+  // Get text from contenteditable div
+  const el=document.getElementById('notesArea_'+di);
+  if(el)trips[cur].days[di].notes=el.innerText||'';
   trips[cur].days[di]._notesLocked=true;
   save();renderDay();toast('Observação salva!');
 }
