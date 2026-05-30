@@ -1069,14 +1069,22 @@ function renderDay(){
         <button class="comment-toggle-btn ${v.comment?'has-comment':''}" onclick="toggleComment(${di},${vi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${v.comment?'Ver comentário':'Adicionar comentário'}</button>
         ${expandedComments.has(vi)?`<div class="comment-panel"><textarea id="cmt_${di}_${vi}" placeholder="Escreva um comentário sobre este lugar...">${v.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveComment(${di},${vi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
-    else{return`<div class="visit-collapsed ${v.done?'done-item':''}" onclick="toggleExpandVisit(${vi})">
+    else{return`<div class="visit-collapsed ${v.done?'done-item':''}" onclick="toggleExpandVisit(${vi})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
       <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${vi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-        <span class="v-name-label">${v.name||'Novo local'}</span>
-        ${v.time?'<span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:3px"><i class=\"ti ti-clock\" style=\"font-size:11px\"></i>'+v.time+'</span>':''}
+      <div style="flex:1;min-width:0">
+        <div class="v-name-label" style="display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <span>${v.name||'Novo local'}</span>
+          ${v.time?'<span style="font-size:11px;color:var(--text3);display:inline-flex;align-items:center;gap:2px;flex-shrink:0"><i class=\"ti ti-clock\" style=\"font-size:11px\"></i>'+v.time+'</span>':''}
+        </div>
       </div>
-      <div class="v-meta">${v.metro?`<span class="v-metro-pill"><i class="ti ti-train"></i>${v.metro}</span>`:''} ${hasGeo?`<span class="v-geo-dot" title="Localização salva"></span>`:''} ${v.ticketName?`<span class="v-ticket-dot" title="Ingresso anexado"></span>`:''} ${v.comment?`<span class="v-comment-dot" title="Tem comentário"></span>`:''}</div></div>
-      <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3);flex-shrink:0"></i></div>`;}
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        ${v.metro?'<span class="v-metro-pill" style="white-space:nowrap"><i class="ti ti-train"></i>'+v.metro+'</span>':''}
+        ${hasGeo?'<span class="v-geo-dot"></span>':''}
+        ${v.ticketName?'<span class="v-ticket-dot"></span>':''}
+        ${v.comment?'<span class="v-comment-dot"></span>':''}
+        <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3)"></i>
+      </div>
+    </div>`;}
   }).join('');
 
   const hLat=day.hotelLat||'',hLng=day.hotelLng||'',hotelFid=`hotel_${di}`;
