@@ -428,7 +428,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
       <button class="auth-btn" id="signupBtn" onclick="doSignup()"><i class="ti ti-user-plus"></i> Criar conta</button>
     </div>
     <div style="margin-top:14px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:10px;padding:12px">
-      <p style="font-size:12px;color:var(--blue2);margin-bottom:8px;font-weight:500">Tem codigo de convite?</p>
+      <p style="font-size:12px;color:var(--blue2);margin-bottom:8px;font-weight:500">Tem codigo de convite? Cole aqui e entre na conta</p>
       <div style="display:flex;gap:6px">
         <input type="text" id="inviteInput" placeholder="Ex: A1B2C3D4" maxlength="8"
           style="flex:1;border:1.5px solid var(--blue-border);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;text-transform:uppercase;letter-spacing:2px">
@@ -470,6 +470,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     </div>
     <div id="tripsList"></div>
     <button class="new-trip-btn" onclick="openNewTripModal()"><i class="ti ti-plus"></i> Nova viagem</button>
+    <div style="margin-top:12px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:12px">
+      <p style="font-size:12px;color:var(--blue2);margin-bottom:8px;font-weight:500"><i class="ti ti-link" style="font-size:12px"></i> Entrar em viagem compartilhada</p>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="homeInviteInput" placeholder="Cole o código aqui..." maxlength="8"
+          style="flex:1;border:1.5px solid var(--blue-border);border-radius:8px;padding:9px 12px;font-size:13px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;text-transform:uppercase;letter-spacing:2px">
+        <button onclick="useHomeInviteCode()"
+          style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Entrar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1425,10 +1434,30 @@ function showAuth(){document.getElementById('mainApp').style.display='none';docu
 function showMain(){document.getElementById('authScreen').style.display='none';document.getElementById('mainApp').style.display='block';}
 function hideLoading(){const el=document.getElementById('loadingScreen');if(!el||el.style.display==='none')return;el.style.opacity='0';setTimeout(()=>{el.style.display='none';},400);}
 
+async function useHomeInviteCode(){
+  const inp=document.getElementById('homeInviteInput');
+  if(!inp)return;
+  const code=inp.value.trim().toLowerCase();
+  if(!code||code.length<4){toast('Digite o código de convite');return;}
+  await applyInviteCode(code);
+  inp.value='';
+}
 async function useInviteCode(){
   const code=document.getElementById('inviteInput').value.trim().toLowerCase();
   if(!code||code.length<4){toast('Digite o codigo de convite');return;}
-  if(!currentUser){toast('Faca login primeiro');return;}
+  if(!currentUser){
+    // Save code and try to sign up/login first
+    toast('Primeiro crie sua conta, depois use o codigo!');
+    // Highlight the signup tab
+    setAuthTab('signup');
+    // Store code for after login
+    window._pendingInviteCode=code;
+    return;
+  }
+  await applyInviteCode(code);
+}
+
+async function applyInviteCode(code){
   const{data,error}=await sb.rpc('accept_invite',{invite_code:code});
   if(error||data?.error){toast(data?.error||'Codigo invalido ou expirado');return;}
   toast('Voce entrou na viagem: '+data.trip_name+' ✈️');
@@ -1615,6 +1644,12 @@ async function startApp(user){
   hideLoading();
   showMain();
   switchTab('home');
+  // Apply pending invite code if any
+  if(window._pendingInviteCode){
+    const code=window._pendingInviteCode;
+    window._pendingInviteCode=null;
+    setTimeout(()=>applyInviteCode(code),1000);
+  }
 }
 
 sb.auth.onAuthStateChange((event,session)=>{
