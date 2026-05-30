@@ -262,6 +262,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .rb-icon-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:4px;border-radius:5px;display:flex;transition:all .15s}
 .rb-icon-btn:hover{color:var(--red);background:var(--red-bg)}
 .seg-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;margin-bottom:6px}
+.seg-item.seg-has-note{background:var(--orange-bg);border-color:var(--orange-border)}
+.seg-item.seg-has-note .seg-hdr span{color:var(--orange)}
 .seg-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .seg-hdr span{font-size:12px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:4px}
 .share-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:9px;padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:background .15s}
@@ -987,12 +989,22 @@ function renderDay(){
     const transfers=day.transfers||[];
     const segsHtml=transfers.map((tr,ti)=>{
       const opt=TR_OPTS.find(o=>o.k===tr.mode)||{icon:'ti-route',label:'Transporte'};
-      return`<div class="seg-item"><div class="seg-hdr"><span><i class="ti ${opt.icon}"></i>${opt.label}</span><i class="ti ti-x rm-seg" style="cursor:pointer" onclick="removeTransfer(${di},${ti})"></i></div>
-      <div class="td-row"><div class="td-field"><label>N° reserva</label><input value="${tr.reservation||''}" placeholder="AB1234" oninput="updTr(${di},${ti},'reservation',this.value)"></div><div class="td-field"><label>Valor</label><input value="${tr.value||''}" placeholder="R$ 450" oninput="updTr(${di},${ti},'value',this.value)"></div></div>
-      <div class="td-row"><div class="td-field"><label>Saída</label><input type="time" value="${tr.depTime||''}" oninput="updTr(${di},${ti},'depTime',this.value)"></div><div class="td-field"><label>Chegada</label><input type="time" value="${tr.arrTime||''}" oninput="updTr(${di},${ti},'arrTime',this.value)"></div></div>
-      <div class="paid-row"><div class="paid-check ${tr.paid?'on':''}" onclick="togglePaidTr(${di},${ti})">${tr.paid?'<i class="ti ti-check"></i>':''}</div><span class="paid-label ${tr.paid?'on':''}">${tr.paid?'Pago':'Marcar como pago'}</span><span style="flex:1"></span><button class="rm-btn" onclick="removeTransfer(${di},${ti})"><i class="ti ti-trash"></i></button></div>
+      const hasNote=!!(tr.reservation||tr.depTime||tr.arrTime||tr.ticketName);
+      return `<div class="seg-item${hasNote?' seg-has-note':''}">
+      <div class="seg-hdr"><span><i class="ti ${opt.icon}"></i>${opt.label}</span><button class="rm-btn" onclick="removeTransfer(${di},${ti})"><i class="ti ti-x"></i></button></div>
+      <div class="td-row">
+        <div class="td-field"><label>N° reserva</label><input id="tr_res_${di}_${ti}" value="${tr.reservation||''}" placeholder="AB1234"></div>
+        <div class="td-field"><label>Saída</label><input type="time" id="tr_dep_${di}_${ti}" value="${tr.depTime||''}"></div>
+      </div>
+      <div class="td-row">
+        <div class="td-field"><label>Chegada</label><input type="time" id="tr_arr_${di}_${ti}" value="${tr.arrTime||''}"></div>
+        <div class="td-field" style="display:flex;align-items:flex-end;padding-bottom:2px">
+          <button class="btn-p" style="padding:8px 14px;font-size:12px;justify-content:center;width:100%" onclick="saveTrFields(${di},${ti})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>
+        </div>
+      </div>
       ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketTr(${di},${ti})"><i class="ti ti-x"></i></button></div>`:''}
-      <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketTr(${di},${ti},this)"></label></div>`;
+      <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketTr(${di},${ti},this)"></label>
+      </div>`;
     }).join('');
     transferSection=`<div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-transfer"></i> Transferência: ${prevCity} → ${city}</h3></div><div class="day-card-body">${segsHtml}<div style="font-size:11px;color:var(--text3);margin-bottom:6px;margin-top:${segsHtml?'8px':'0'}">Adicionar modal:</div><div class="transport-grid">${TR_OPTS.map(o=>`<button class="tr-btn ${o.isMet?'metro-btn':''}" onclick="addTransfer(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`).join('')}</div></div></div>`;
   }
@@ -1284,6 +1296,15 @@ function attachTicketLocalByKey(di,key,inp){const f=inp.files[0];if(!f)return;co
 function rmTicketLocalByKey(di,key){const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].ticketName='';trips[cur].days[di].transports[idx].ticketData='';save();renderDay();}}
 function addTransfer(di,mode){const day=trips[cur].days[di];if(!day.transfers)day.transfers=[];day.transfers.push({mode,reservation:'',depTime:'',arrTime:'',value:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
 function removeTransfer(di,ti){trips[cur].days[di].transfers.splice(ti,1);save();renderDay();}
+function saveTrFields(di,ti){
+  const res=document.getElementById('tr_res_'+di+'_'+ti);
+  const dep=document.getElementById('tr_dep_'+di+'_'+ti);
+  const arr=document.getElementById('tr_arr_'+di+'_'+ti);
+  if(res)trips[cur].days[di].transfers[ti].reservation=res.value;
+  if(dep)trips[cur].days[di].transfers[ti].depTime=dep.value;
+  if(arr)trips[cur].days[di].transfers[ti].arrTime=arr.value;
+  save();toast('Transferência salva!');renderDay();
+}
 function updTr(di,ti,f,v){trips[cur].days[di].transfers[ti][f]=v;save();}
 function togglePaidTr(di,ti){const t=trips[cur].days[di].transfers[ti];t.paid=!t.paid;save();renderDay();}
 function attachTicketTr(di,ti,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{trips[cur].days[di].transfers[ti].ticketName=f.name;trips[cur].days[di].transfers[ti].ticketData=e.target.result;save();renderDay();};r.readAsDataURL(f);}
