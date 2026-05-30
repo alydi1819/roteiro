@@ -1467,7 +1467,7 @@ function buildFoodSection(di){
     {k:'dessert',label:'Sobremesa',icon:'ti-ice-cream'},
     {k:'drink',label:'Beber',icon:'ti-glass-full'},
   ];
-  const filterHtml=`<div class="food-cat-filter">${cats.map(c=>`<button class="food-cat-btn ${filter===c.k?'active-'+c.k:''}" onclick="setFoodFilter(${di},'${c.k}')"><i class="ti ${c.icon}" style="font-size:13px"></i>${c.label}</button>`).join('')}</div>`;
+  const filterHtml=`<div style="display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-bottom:10px">${cats.map(c=>`<button class="food-cat-btn ${filter===c.k?'active-'+c.k:''}" style="flex-shrink:0;display:inline-flex" onclick="setFoodFilter(${di},'${c.k}')"><i class="ti ${c.icon}" style="font-size:13px"></i>${c.label}</button>`).join('')}</div>`;
   const visible=filter==='all'?foods:foods.filter(f=>f.cat===filter);
   const foodsHtml=visible.map((f,_)=>{
     const fi=foods.indexOf(f);
