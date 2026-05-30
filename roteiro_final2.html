@@ -982,6 +982,18 @@ function buildSmartRouteBtn(di){
   return'<a href="'+url+'" target="_blank" class="smart-route-btn"><i class="ti ti-route"></i> Rota inteligente no Maps ('+wp.length+' local'+(wp.length>1?'is':'')+')</a>';
 }
 
+function moveVisitToNextDay(di,vi){
+  const trip=trips[cur];
+  if(di>=trip.days.length-1){toast('Não há dia seguinte! 📅');return;}
+  const visit=trip.days[di].visits.splice(vi,1)[0];
+  if(!trip.days[di+1].visits)trip.days[di+1].visits=[];
+  trip.days[di+1].visits.push(visit);
+  save();
+  expandedVisits=new Set();
+  renderDay();
+  toast(`"${visit.name||'Local'}" movido para o dia ${trip.days[di+1].num} ➡️`);
+}
+
 function renderDay(){
   const trip=trips[cur];const day=trip.days[curDay];const di=curDay;
   const city=getCityForDay(trip,day.date);const prevCity=getPrevCity(trip,day.date);
@@ -1066,6 +1078,7 @@ function renderDay(){
         ${v.ticketName?`<div class="attach-file" onclick="viewAttach('${v.ticketData}','${v.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
         <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${vi},this)"></label>
         <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${vi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
+        ${di<trips[cur].days.length-1?`<button onclick="moveVisitToNextDay(${di},${vi})" style="width:100%;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Passar pro dia ${trips[cur].days[di+1].num}</button>`:''}
         <button class="comment-toggle-btn ${v.comment?'has-comment':''}" onclick="toggleComment(${di},${vi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${v.comment?'Ver comentário':'Adicionar comentário'}</button>
         ${expandedComments.has(vi)?`<div class="comment-panel"><textarea id="cmt_${di}_${vi}" placeholder="Escreva um comentário sobre este lugar...">${v.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveComment(${di},${vi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
@@ -1082,6 +1095,7 @@ function renderDay(){
         ${hasGeo?'<span class="v-geo-dot"></span>':''}
         ${v.ticketName?'<span class="v-ticket-dot"></span>':''}
         ${v.comment?'<span class="v-comment-dot"></span>':''}
+        ${di<trips[cur].days.length-1?`<button onclick="event.stopPropagation();moveVisitToNextDay(${di},${vi})" title="Passar pro dia seguinte" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:7px;padding:4px 7px;cursor:pointer;display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--text2);font-family:inherit;white-space:nowrap;transition:all .15s" onmouseover="this.style.borderColor='var(--orange-border)';this.style.color='var(--orange)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'"><i class="ti ti-arrow-right" style="font-size:12px"></i></button>`:''}
         <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3)"></i>
       </div>
     </div>`;}
