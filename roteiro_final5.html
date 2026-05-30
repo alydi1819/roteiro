@@ -1366,9 +1366,27 @@ function rmVisitTicket(di,vi){trips[cur].days[di].visits[vi].ticketName='';trips
    TRANSPORT
 ═══════════════════════════════════════════ */
 function saveTrLocal(di,key){
-  const desc=document.getElementById('trDesc_'+di+'_'+key);const val=document.getElementById('trVal_'+di+'_'+key);const cmt=document.getElementById('trCmt_'+di+'_'+key);
+  // Read all values from DOM first, before any re-render
+  const descVal=document.getElementById('trDesc_'+di+'_'+key)?.value||'';
+  const valVal=document.getElementById('trVal_'+di+'_'+key)?.value||'';
+  const cmtVal=document.getElementById('trCmt_'+di+'_'+key)?.value||'';
   const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);
-  if(idx>=0){if(desc)trips[cur].days[di].transports[idx].desc=desc.value;if(val)trips[cur].days[di].transports[idx].value=val.value;if(cmt)trips[cur].days[di].transports[idx].comment=cmt.value;save();toast('Transporte salvo!');renderDay();}
+  if(idx<0)return;
+  trips[cur].days[di].transports[idx].desc=descVal;
+  trips[cur].days[di].transports[idx].value=valVal;
+  trips[cur].days[di].transports[idx].comment=cmtVal;
+  // Flush save immediately (bypass debounce)
+  clearTimeout(_saveTimer);
+  const day=trips[cur].days[di];
+  sb.from('trip_days').update({
+    transports:day.transports||[],visits:day.visits||[],transfers:day.transfers||[],
+    title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',
+    hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',
+    hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:day.hotelAttachData||'',
+    notes:day.notes||'',open_tr_key:day._openTrKey||'',foods:day.foods||[]
+  }).eq('id',day.id).then(({error})=>{if(error)toast('Erro ao salvar');});
+  toast('Transporte salvo!');
+  renderDay();
 }
 function toggleLocalTr(di,key){const day=trips[cur].days[di];day._openTrKey=day._openTrKey===key?null:key;if(day._openTrKey&&!day.transports.find(t=>t.mode===key))day.transports.push({mode:key,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
 function togglePaidLocalByKey(di,key){const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].paid=!trips[cur].days[di].transports[idx].paid;save();renderDay();}}
@@ -1844,34 +1862,4 @@ async function startApp(user){
   showMain();
   switchTab('home');
   // Apply pending invite code if any
-  if(window._pendingInviteCode){
-    const code=window._pendingInviteCode;
-    window._pendingInviteCode=null;
-    setTimeout(()=>applyInviteCode(code),1000);
-  }
-}
-
-sb.auth.onAuthStateChange((event,session)=>{
-  console.log('Auth event:',event);
-  if(event==='SIGNED_IN'&&session){
-    startApp(session.user);
-  } else if(event==='SIGNED_OUT'){
-    currentUser=null;currentProfile=null;trips=[];cur=null;
-    if(realtimeSub){sb.removeChannel(realtimeSub);realtimeSub=null;}
-    hideLoading();showAuth();
-  }
-});
-
-// Check session on load
-sb.auth.getSession().then(({data:{session}})=>{
-  if(session){
-    startApp(session.user);
-  } else {
-    hideLoading();
-    showAuth();
-  }
-});
-
-</script>
-</body>
-</html>
+  if(
