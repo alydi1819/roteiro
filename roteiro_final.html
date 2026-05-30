@@ -547,7 +547,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <nav class="bottom-nav" id="bottomNav">
   <button class="bn-item active" id="bn-home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
   <button class="bn-item" id="bn-summary" onclick="switchTab('summary')"><i class="ti ti-layout-list"></i><span>Resumo</span></button>
-  <button class="bn-item" id="bn-finance" onclick="switchTab('finance')"><i class="ti ti-coin"></i><span>Gastos</span></button>
   <button class="bn-item" id="bn-checklist" onclick="switchTab('checklist')"><i class="ti ti-checkbox"></i><span>Bagagem</span></button>
   <button class="bn-item" id="bn-notes" onclick="switchTab('notes')"><i class="ti ti-notebook"></i><span>Notas</span></button>
 </nav>
@@ -783,7 +782,7 @@ function switchTab(tab){
   curTab=tab;
   // hide trip screen if going to other tabs
   document.getElementById('tripScreen').classList.remove('active');
-  ['home','summary','finance','checklist','notes'].forEach(t=>{
+  ['home','summary','checklist','notes'].forEach(t=>{
     document.getElementById(t+'Screen').classList.toggle('active',t===tab);
     document.getElementById('bn-'+t).classList.toggle('active',t===tab);
   });
@@ -880,7 +879,7 @@ function getPrevCity(trip,dayDate){
 }
 function openTrip(i){
   cur=i;curDay=0;expandedVisits=new Set();expandedComments=new Set();
-  ['home','summary','finance','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});
+  ['home','summary','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});
   document.getElementById('tripScreen').classList.add('active');
   renderTrip();
 }
@@ -1027,7 +1026,7 @@ function renderDay(){
     const opt=TR_OPTS.find(o=>o.k===openTrKey)||{icon:'ti-route',label:'Transporte'};
     openTrDetail=`<div class="transport-detail"><h4><i class="ti ${opt.icon}"></i>${opt.label}</h4>
     <div class="td-row"><div class="td-field"><label>Descrição</label><input id="trDesc_${di}_${openTrKey}" value="${tr.desc||''}" placeholder="Ex: Linha 2, Uber..."></div><div class="td-field"><label>Valor</label><input id="trVal_${di}_${openTrKey}" value="${tr.value||''}" placeholder="R$ 30"></div></div>
-    <div class="paid-row"><div class="paid-check ${tr.paid?'on':''}" onclick="togglePaidLocalByKey(${di},'${openTrKey}')">${tr.paid?'<i class="ti ti-check"></i>':''}</div><span class="paid-label ${tr.paid?'on':''}">${tr.paid?'Pago':'Marcar como pago'}</span><span style="flex:1"></span><button class="rm-btn" onclick="removeLocalTrByKey(${di},'${openTrKey}')"><i class="ti ti-trash"></i></button></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="rm-btn" onclick="removeLocalTrByKey(${di},'${openTrKey}')"><i class="ti ti-trash"></i> Remover</button></div>
     ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketLocalByKey(${di},'${openTrKey}')"><i class="ti ti-x"></i></button></div>`:''}
     <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketLocalByKey(${di},'${openTrKey}',this)"></label>
     <button class="btn-p" style="width:100%;margin-top:10px;padding:10px;font-size:13px;justify-content:center" onclick="saveTrLocal(${di},'${openTrKey}')"><i class="ti ti-device-floppy"></i> Salvar</button></div>`;
@@ -1081,8 +1080,10 @@ function renderDay(){
     <div class="day-card-body"><div class="transport-grid" style="margin-bottom:${openTrDetail?'10px':'0'}">${transportBtnsHtml}</div>${openTrDetail}</div></div>
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-star"></i> O que visitar</h3></div>
     <div class="day-card-body">${visitsHtml}<button class="add-v-btn" onclick="addVisit(${di})"><i class="ti ti-plus"></i> Adicionar local</button>${buildSmartRouteBtn(di)}</div></div>
-    <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-notes"></i> Observações</h3></div>
-    <div class="day-card-body"><textarea class="notes-area" oninput="updDay(${di},'notes',this.value)">${day.notes||''}</textarea></div></div>
+    <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-notes"></i> Observações</h3>
+      ${day._notesLocked?`<button class="cfg-btn" style="font-size:11px;padding:4px 10px" onclick="unlockNotes(${di})"><i class="ti ti-edit" style="font-size:13px"></i> Editar</button>`:`<button class="cfg-btn" style="font-size:11px;padding:4px 10px;background:var(--orange);color:#fff;border-color:var(--orange)" onclick="saveNotesDayLock(${di})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>`}
+    </div>
+    <div class="day-card-body"><textarea class="notes-area" ${day._notesLocked?'readonly style="background:var(--surface2);color:var(--text2);cursor:default"':''} oninput="updDay(${di},'notes',this.value)">${day.notes||''}</textarea></div></div>
     ${trips[cur].days.length>1?`<button class="del-day-btn" onclick="deleteDay(${di})"><i class="ti ti-trash"></i> Remover este dia</button>`:''}`;
 }
 
@@ -1128,7 +1129,7 @@ function renderSummary(){
   });
   document.getElementById('timelineContent').innerHTML=html;
 }
-function openTripDay(di){curDay=di;expandedVisits=new Set();expandedComments=new Set();['home','summary','finance','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});document.getElementById('tripScreen').classList.add('active');renderTrip();}
+function openTripDay(di){curDay=di;expandedVisits=new Set();expandedComments=new Set();['home','summary','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});document.getElementById('tripScreen').classList.add('active');renderTrip();}
 
 /* ═══════════════════════════════════════════
    FINANCE
@@ -1345,6 +1346,14 @@ function saveComment(di,vi){
   renderDay();
   toast('Comentário salvo!');
 }
+function saveNotesDayLock(di){
+  trips[cur].days[di]._notesLocked=true;
+  save();renderDay();toast('Observação salva!');
+}
+function unlockNotes(di){
+  trips[cur].days[di]._notesLocked=false;
+  save();renderDay();
+}
 function toggleExpandVisit(vi){if(expandedVisits.has(vi))expandedVisits.delete(vi);else expandedVisits.add(vi);renderDay();}
 function updDay(di,f,v){trips[cur].days[di][f]=v;save();}
 function updVisit(di,vi,f,v){trips[cur].days[di].visits[vi][f]=v;save();}
@@ -1448,7 +1457,7 @@ async function loadTripsDB(){
   for(const t of merged){
     const{data:drows}=await sb.from('trip_days').select('*').eq('trip_id',t.id).order('day_num');
     t.start=t.start_date;t.end=t.end_date;t.routes=t.routes||[];
-    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',_openTrKey:d.open_tr_key||null}));
+    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',_openTrKey:d.open_tr_key||null,_notesLocked:localStorage.getItem('nl_'+d.id)==='1'}));
   }
   trips=merged;
 }
@@ -1458,6 +1467,8 @@ function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
     const day=trips[cur]?.days[curDay];if(!day?.id)return;
+    // Persist notesLocked in localStorage
+    try{localStorage.setItem('nl_'+day.id, day._notesLocked?'1':'0');}catch(e){}
     // Strip large base64 data from visits for saving (keep name only)
     const visitsToSave=(day.visits||[]).map(v=>({...v}));
     const hotelData=day.hotelAttachData||'';
