@@ -188,17 +188,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .drp-selection-label strong{color:var(--blue)}
 
 /* ── TRANSPORT ── */
-.transport-grid{display:flex;gap:6px;flex-wrap:wrap}
+.transport-grid{display:flex;gap:6px;flex-wrap:wrap;width:100%}
 .tr-btn{border:1.5px solid var(--border2);border-radius:20px;padding:7px 13px;font-size:12px;cursor:pointer;background:transparent;color:var(--text2);display:flex;align-items:center;gap:5px;font-family:inherit;transition:all .15s}
 .tr-btn:hover{border-color:var(--blue2)}
 .tr-btn.has-obs{border-color:var(--orange);background:var(--orange-bg);color:var(--orange);font-weight:500}
 .tr-btn.metro-btn{border-color:var(--metro-border);color:var(--metro)}
 .tr-btn.metro-btn.has-obs{background:var(--metro-bg);border-color:var(--metro)}
 .tr-btn i{font-size:15px}
-.transport-detail{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-top:10px}
+.transport-detail{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-top:10px;overflow:hidden}
 .transport-detail h4{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:10px;display:flex;align-items:center;gap:5px}
-.td-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.td-field{display:flex;flex-direction:column;gap:4px}
+.td-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;min-width:0}
+.td-field{display:flex;flex-direction:column;gap:4px;min-width:0;overflow:hidden}
 .td-field label{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
 .td-field input{border:1.5px solid var(--border2);border-radius:7px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--surface);outline:none;color:var(--text);transition:border-color .15s}
 .td-field input:focus{border-color:var(--blue2)}
@@ -1092,7 +1092,7 @@ function renderDay(){
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-notes"></i> Observações</h3>
       ${day._notesLocked?`<button class="cfg-btn" style="font-size:11px;padding:4px 10px" onclick="unlockNotes(${di})"><i class="ti ti-edit" style="font-size:13px"></i> Editar</button>`:`<button class="cfg-btn" style="font-size:11px;padding:4px 10px;background:var(--orange);color:#fff;border-color:var(--orange)" onclick="saveNotesDayLock(${di})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>`}
     </div>
-    <div class="day-card-body"><textarea class="notes-area" ${day._notesLocked?'readonly style="background:var(--surface2);color:var(--text2);cursor:default"':''} oninput="updDay(${di},'notes',this.value)">${day.notes||''}</textarea></div></div>
+    <div class="day-card-body"><textarea class="notes-area" id="notesArea_${di}" ${day._notesLocked?'readonly style="background:var(--surface2);color:var(--text2);cursor:default;resize:none"':''} oninput="updDay(${di},'notes',this.value);autoResizeNotes(this)">${day.notes||''}</textarea></div></div>
     ${trips[cur].days.length>1?`<button class="del-day-btn" onclick="deleteDay(${di})"><i class="ti ti-trash"></i> Remover este dia</button>`:''}`;
 }
 
@@ -1354,6 +1354,16 @@ function saveComment(di,vi){
   if(!ta.value.trim())expandedComments.delete(vi);
   renderDay();
   toast('Comentário salvo!');
+}
+function autoResizeNotes(el){
+  el.style.height='auto';
+  el.style.height=el.scrollHeight+'px';
+}
+// Auto-resize all notes areas after render
+function initNotesResize(){
+  document.querySelectorAll('.notes-area').forEach(el=>{
+    if(el.value)autoResizeNotes(el);
+  });
 }
 function saveNotesDayLock(di){
   trips[cur].days[di]._notesLocked=true;
