@@ -735,7 +735,7 @@ function saveLocLink(fieldId){
   const parts=fieldId.split('_');const type=parts[0];
   if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
   else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
-  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].foods[fi].name)trips[cur].days[di].foods[fi].name=locName;save();renderDay();}
+  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].foods[fi].name){trips[cur].days[di].foods[fi].name=locName;}save();renderDay();}
   toast('Localização salva!');
 }
 function clearLocLink(fieldId){
@@ -1510,7 +1510,7 @@ function buildFoodSection(di){
         <button class="rm-btn" onclick="event.stopPropagation();rmFood(${di},${fi})" title="Excluir lugar" style="color:var(--red)"><i class="ti ti-trash"></i></button>
       </div>
       <div class="visit-expanded-body">
-        <input class="visit-name-edit" value="${f.name||''}" placeholder="Nome do lugar" oninput="updFood(${di},${fi},'name',this.value)">
+        <input class="visit-name-edit" id="fname_${di}_${fi}" value="${f.name||''}" placeholder="Nome do lugar" oninput="updFood(${di},${fi},'name',this.value)">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">CATEGORIA</div>
@@ -1585,7 +1585,7 @@ function rmFood(di,fi){if(!confirm('Excluir "'+( trips[cur].days[di].foods[fi].n
 function toggleExpandFood(di,fi){const k=di+'_'+fi;if(expandedFoods.has(k))expandedFoods.delete(k);else expandedFoods.add(k);renderDay();}
 function updFood(di,fi,field,val){trips[cur].days[di].foods[fi][field]=val;save();}
 function toggleFood(di,fi){trips[cur].days[di].foods[fi].done=!trips[cur].days[di].foods[fi].done;save();renderDay();}
-function saveFood(di,fi){save();toast('Lugar salvo! ✓');}
+function saveFood(di,fi){save();expandedFoods.delete(di+'_'+fi);renderDay();toast('Lugar salvo! ✓');}
 function deleteDay(di){const trip=trips[cur];if(trip.days.length<=1){toast('Mínimo 1 dia');return;}if(!confirm('Remover este dia?'))return;trip.days.splice(di,1);trip.days.forEach((d,i)=>d.num=i+1);curDay=Math.min(curDay,trip.days.length-1);save();renderTrip();}
 
 /* ═══════════════════════════════════════════
