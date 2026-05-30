@@ -1585,7 +1585,7 @@ function rmFood(di,fi){if(!confirm('Excluir "'+( trips[cur].days[di].foods[fi].n
 function toggleExpandFood(di,fi){const k=di+'_'+fi;if(expandedFoods.has(k))expandedFoods.delete(k);else expandedFoods.add(k);renderDay();}
 function updFood(di,fi,field,val){trips[cur].days[di].foods[fi][field]=val;save();}
 function toggleFood(di,fi){trips[cur].days[di].foods[fi].done=!trips[cur].days[di].foods[fi].done;save();renderDay();}
-function saveFood(di,fi){save();expandedFoods.delete(di+'_'+fi);renderDay();toast('Lugar salvo! ✓');}
+function saveFood(di,fi){save();toast('Lugar salvo! ✓');}
 function toggleFoodComment(di,fi){
   const k=di+'_'+fi;
   if(expandedFoodComments.has(k))expandedFoodComments.delete(k);else expandedFoodComments.add(k);
