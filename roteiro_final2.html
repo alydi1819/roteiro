@@ -1051,22 +1051,31 @@ function renderDay(){
         <button class="rm-btn" onclick="event.stopPropagation();rmVisit(${di},${vi})"><i class="ti ti-x"></i></button>
       </div>
       <div class="visit-expanded-body">
-        <input class="visit-name-edit" value="${v.name||''}" placeholder="Nome do local" oninput="updVisit(${di},${vi},'name',this.value)">
+        <input class="visit-name-edit" id="vname_${di}_${vi}" value="${v.name||''}" placeholder="Nome do local" oninput="updVisit(${di},${vi},'name',this.value)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <i class="ti ti-clock" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>
+          <input type="time" id="vtime_${di}_${vi}" value="${v.time||''}" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;flex:1" oninput="updVisit(${di},${vi},'time',this.value)">
+          <span style="font-size:11px;color:var(--text3)">Horário</span>
+        </div>
         <div class="visit-addr-row">
-          <div class="vaf metro-f"><i class="ti ti-train ico"></i><input value="${v.metro||''}" placeholder="Metrô próximo" oninput="updVisit(${di},${vi},'metro',this.value)"></div>
+          <div class="vaf"><i class="ti ti-train ico"></i><input value="${v.metro||''}" placeholder="Metrô próximo" oninput="updVisit(${di},${vi},'metro',this.value)"></div>
         </div>
         <div class="field-label">LOCALIZAÇÃO</div>
-        ${buildLocSearch(fid,v.lat,v.lng,v.locName||v.name)}
+        ${buildLocSearch('visit_'+di+'_'+vi,v.lat,v.lng,v.locName||v.name)}
         <div class="field-label">INGRESSO</div>
         ${v.ticketName?`<div class="attach-file" onclick="viewAttach('${v.ticketData}','${v.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
         <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${vi},this)"></label>
+        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${vi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
         <button class="comment-toggle-btn ${v.comment?'has-comment':''}" onclick="toggleComment(${di},${vi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${v.comment?'Ver comentário':'Adicionar comentário'}</button>
         ${expandedComments.has(vi)?`<div class="comment-panel"><textarea id="cmt_${di}_${vi}" placeholder="Escreva um comentário sobre este lugar...">${v.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveComment(${di},${vi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
     else{return`<div class="visit-collapsed ${v.done?'done-item':''}" onclick="toggleExpandVisit(${vi})">
       <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${vi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
-      <span class="v-name-label">${v.name||'Novo local'}</span>
-      <div class="v-meta">${v.metro?`<span class="v-metro-pill"><i class="ti ti-train"></i>${v.metro}</span>`:''} ${hasGeo?`<span class="v-geo-dot" title="Localização salva"></span>`:''} ${v.ticketName?`<span class="v-ticket-dot" title="Ingresso anexado"></span>`:''} ${v.comment?`<span class="v-comment-dot" title="Tem comentário"></span>`:''}</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+        <span class="v-name-label">${v.name||'Novo local'}</span>
+        ${v.time?'<span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:3px"><i class=\"ti ti-clock\" style=\"font-size:11px\"></i>'+v.time+'</span>':''}
+      </div>
+      <div class="v-meta">${v.metro?`<span class="v-metro-pill"><i class="ti ti-train"></i>${v.metro}</span>`:''} ${hasGeo?`<span class="v-geo-dot" title="Localização salva"></span>`:''} ${v.ticketName?`<span class="v-ticket-dot" title="Ingresso anexado"></span>`:''} ${v.comment?`<span class="v-comment-dot" title="Tem comentário"></span>`:''}</div></div>
       <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3);flex-shrink:0"></i></div>`;}
   }).join('');
 
@@ -1377,6 +1386,10 @@ function saveNotesDayLock(di){
 function unlockNotes(di){
   trips[cur].days[di]._notesLocked=false;
   save();renderDay();
+}
+function saveVisit(di,vi){
+  save();
+  toast('Local salvo! ✓');
 }
 function toggleExpandVisit(vi){if(expandedVisits.has(vi))expandedVisits.delete(vi);else expandedVisits.add(vi);renderDay();}
 function updDay(di,f,v){trips[cur].days[di][f]=v;save();}
