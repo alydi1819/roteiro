@@ -643,7 +643,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 /* STATE */
 let trips=[],cur=null,curDay=0,curTab='home';
-let editingRouteIdx=new Set(),expandedVisits=new Set(),expandedComments=new Set();
+let editingRouteIdx=new Set(),expandedVisits=new Set(),expandedComments=new Set(),openTransfers=new Set();
 let checklist=[],globalNotes={};
 
 function toast(m,dur=2400){const t=document.getElementById('toastEl');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
@@ -900,7 +900,7 @@ function renderTrip(){
   }).join('')+`<button class="add-day-tab" onclick="addDay()"><i class="ti ti-plus"></i> Dia</button>`;
   renderDay();
 }
-function switchDay(i){curDay=i;expandedVisits=new Set();expandedComments=new Set();renderTrip();}
+function switchDay(i){curDay=i;expandedVisits=new Set();expandedComments=new Set();openTransfers=new Set();renderTrip();}
 function addDay(){const trip=trips[cur];const last=trip.days[trip.days.length-1];const d=new Date(last.date+'T12:00:00');d.setDate(d.getDate()+1);trip.days.push(makeDay(trip.days.length+1,d.toISOString().split('T')[0]));curDay=trip.days.length-1;save();renderTrip();toast('Dia adicionado!');}
 
 /* ═══════════════════════════════════════════
@@ -990,9 +990,17 @@ function renderDay(){
     const segsHtml=transfers.map((tr,ti)=>{
       const opt=TR_OPTS.find(o=>o.k===tr.mode)||{icon:'ti-route',label:'Transporte'};
       const hasNote=!!(tr.reservation||tr.depTime||tr.arrTime||tr.ticketName);
+      const isOpen=openTransfers.has(`${di}_${ti}`);
       return `<div class="seg-item${hasNote?' seg-has-note':''}">
-      <div class="seg-hdr"><span><i class="ti ${opt.icon}"></i>${opt.label}</span><button class="rm-btn" onclick="removeTransfer(${di},${ti})"><i class="ti ti-x"></i></button></div>
-      <div class="td-row">
+      <div class="seg-hdr" onclick="toggleTransfer(${di},${ti})" style="cursor:pointer;user-select:none">
+        <span><i class="ti ${opt.icon}"></i>${opt.label}${hasNote?' <i class=\"ti ti-circle-filled\" style=\"font-size:7px;color:var(--orange);vertical-align:2px\"></i>':''}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="font-size:14px;color:var(--text3)"></i>
+          <button class="rm-btn" onclick="event.stopPropagation();removeTransfer(${di},${ti})"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+      ${isOpen?`
+      <div class="td-row" style="margin-top:10px">
         <div class="td-field"><label>N° reserva</label><input id="tr_res_${di}_${ti}" value="${tr.reservation||''}" placeholder="AB1234"></div>
         <div class="td-field"><label>Saída</label><input type="time" id="tr_dep_${di}_${ti}" value="${tr.depTime||''}"></div>
       </div>
@@ -1004,6 +1012,7 @@ function renderDay(){
       </div>
       ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketTr(${di},${ti})"><i class="ti ti-x"></i></button></div>`:''}
       <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketTr(${di},${ti},this)"></label>
+      `:''}
       </div>`;
     }).join('');
     transferSection=`<div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-transfer"></i> Transferência: ${prevCity} → ${city}</h3></div><div class="day-card-body">${segsHtml}<div style="font-size:11px;color:var(--text3);margin-bottom:6px;margin-top:${segsHtml?'8px':'0'}">Adicionar modal:</div><div class="transport-grid">${TR_OPTS.map(o=>`<button class="tr-btn ${o.isMet?'metro-btn':''}" onclick="addTransfer(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`).join('')}</div></div></div>`;
@@ -1296,6 +1305,12 @@ function attachTicketLocalByKey(di,key,inp){const f=inp.files[0];if(!f)return;co
 function rmTicketLocalByKey(di,key){const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].ticketName='';trips[cur].days[di].transports[idx].ticketData='';save();renderDay();}}
 function addTransfer(di,mode){const day=trips[cur].days[di];if(!day.transfers)day.transfers=[];day.transfers.push({mode,reservation:'',depTime:'',arrTime:'',value:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
 function removeTransfer(di,ti){trips[cur].days[di].transfers.splice(ti,1);save();renderDay();}
+function toggleTransfer(di,ti){
+  const key=di+'_'+ti;
+  if(openTransfers.has(key))openTransfers.delete(key);
+  else openTransfers.add(key);
+  renderDay();
+}
 function saveTrFields(di,ti){
   const res=document.getElementById('tr_res_'+di+'_'+ti);
   const dep=document.getElementById('tr_dep_'+di+'_'+ti);
