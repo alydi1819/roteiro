@@ -1066,7 +1066,7 @@ function renderDay(){
   }
 
   const trActive=day.transports||[];
-  const transportBtnsHtml=TR_OPTS.map(o=>{const existing=trActive.find(t=>t.mode===o.k);const hasObs=existing&&(existing.desc||existing.value||existing.ticketName);return`<button class="tr-btn ${o.isMet?'metro-btn':''} ${hasObs?'has-obs':''}" onclick="toggleLocalTr(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`;}).join('');
+  const transportBtnsHtml=TR_OPTS.map(o=>{const existing=trActive.find(t=>t.mode===o.k);const hasObs=existing&&(existing.desc||existing.value||existing.ticketName||existing.comment);return`<button class="tr-btn ${o.isMet?'metro-btn':''} ${hasObs?'has-obs':''}" onclick="toggleLocalTr(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`;}).join('');
   const openTrKey=day._openTrKey||null;
   let openTrDetail='';
   if(openTrKey){
@@ -1369,18 +1369,14 @@ function saveTrLocal(di,key){
   const descEl=document.getElementById('trDesc_'+di+'_'+key);
   const valEl=document.getElementById('trVal_'+di+'_'+key);
   const cmtEl=document.getElementById('trCmt_'+di+'_'+key);
-  console.log('[saveTrLocal] di='+di+' key='+key);
-  console.log('[saveTrLocal] cmtEl=', cmtEl, 'value=', cmtEl?.value);
   const descVal=descEl?.value||'';
   const valVal=valEl?.value||'';
   const cmtVal=cmtEl?.value||'';
   const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);
-  console.log('[saveTrLocal] idx='+idx+' cmtVal='+cmtVal);
-  if(idx<0){console.log('[saveTrLocal] idx not found!');return;}
+  if(idx<0)return;
   trips[cur].days[di].transports[idx].desc=descVal;
   trips[cur].days[di].transports[idx].value=valVal;
   trips[cur].days[di].transports[idx].comment=cmtVal;
-  console.log('[saveTrLocal] transport after update:', JSON.stringify(trips[cur].days[di].transports[idx]));
   clearTimeout(_saveTimer);
   const day=trips[cur].days[di];
   sb.from('trip_days').update({
@@ -1389,10 +1385,7 @@ function saveTrLocal(di,key){
     hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',
     hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:day.hotelAttachData||'',
     notes:day.notes||'',open_tr_key:day._openTrKey||'',foods:day.foods||[]
-  }).eq('id',day.id).then(({error,data})=>{
-    console.log('[saveTrLocal] supabase result error=',error,'data=',data);
-    if(error)toast('Erro ao salvar: '+error.message);
-  });
+  }).eq('id',day.id).then(({error})=>{if(error)toast('Erro ao salvar: '+error.message);});
   toast('Transporte salvo!');
   renderDay();
 }
