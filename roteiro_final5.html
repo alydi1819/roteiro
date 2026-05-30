@@ -1481,6 +1481,7 @@ function addVisit(di){if(!trips[cur].days[di].visits)trips[cur].days[di].visits=
 // Track active category filter per day and expanded food items
 const foodCatFilter={};    // di -> 'all'|'meal'|'dessert'|'drink'
 const expandedFoods=new Set(); // 'di_fi'
+const expandedFoodComments=new Set(); // 'di_fi'
 
 function getFoodFilter(di){return foodCatFilter[di]||'all';}
 function setFoodFilter(di,cat){foodCatFilter[di]=cat;renderDay();}
@@ -1500,6 +1501,7 @@ function buildFoodSection(di){
   const foodsHtml=visible.map((f,_)=>{
     const fi=foods.indexOf(f);
     const isExp=expandedFoods.has(di+'_'+fi);
+    const expCmtF=expandedFoodComments.has(di+'_'+fi);
     const catMeta={meal:{label:'Refeição',cls:'food-pill-meal',icon:'ti-tools-kitchen-2'},dessert:{label:'Sobremesa',cls:'food-pill-dessert',icon:'ti-ice-cream'},drink:{label:'Beber',cls:'food-pill-drink',icon:'ti-glass-full'}};
     const cm=catMeta[f.cat||'meal'];
     if(isExp){return`<div class="visit-expanded">
@@ -1511,35 +1513,33 @@ function buildFoodSection(di){
       </div>
       <div class="visit-expanded-body">
         <input class="visit-name-edit" id="fname_${di}_${fi}" value="${f.name||''}" placeholder="Nome do lugar" oninput="updFood(${di},${fi},'name',this.value)">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">CATEGORIA</div>
-            <select onchange="updFood(${di},${fi},'cat',this.value)" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
-              <option value="meal" ${(f.cat||'meal')==='meal'?'selected':''}>🍽️ Refeição</option>
-              <option value="dessert" ${f.cat==='dessert'?'selected':''}>🍰 Sobremesa</option>
-              <option value="drink" ${f.cat==='drink'?'selected':''}>🥂 Beber</option>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">HORÁRIO</div>
-            <input type="time" value="${f.time||''}" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none" oninput="updFood(${di},${fi},'time',this.value)">
-          </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <i class="ti ti-clock" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>
+          <input type="time" value="${f.time||''}" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;flex:1" oninput="updFood(${di},${fi},'time',this.value)">
+          <select onchange="updFood(${di},${fi},'cat',this.value)" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
+            <option value="meal" ${(f.cat||'meal')==='meal'?'selected':''}>🍽️ Refeição</option>
+            <option value="dessert" ${f.cat==='dessert'?'selected':''}>🍰 Sobremesa</option>
+            <option value="drink" ${f.cat==='drink'?'selected':''}>🥂 Beber</option>
+          </select>
         </div>
         <div class="field-label">LOCALIZAÇÃO</div>
         ${buildLocSearch('food_'+di+'_'+fi,f.lat,f.lng,f.locName||f.name)}
-        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveFood(${di},${fi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>
+        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveFood(${di},${fi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
+        <button class="comment-toggle-btn ${f.comment?'has-comment':''}" onclick="toggleFoodComment(${di},${fi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${f.comment?'Ver comentário':'Adicionar comentário'}</button>
+        ${expCmtF?`<div class="comment-panel"><textarea id="fcmt_${di}_${fi}" placeholder="Escreva um comentário sobre este lugar...">${f.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveFoodComment(${di},${fi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
     else{return`<div class="visit-collapsed ${f.done?'done-item':''}" onclick="toggleExpandFood(${di},${fi})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
       <div class="v-check ${f.done?'on':''}" onclick="event.stopPropagation();toggleFood(${di},${fi})" style="width:18px;height:18px;border:1.5px solid ${f.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${f.done?'var(--success)':'var(--surface)'}">${f.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          <span style="font-size:13px;font-weight:500;color:var(--text);${f.done?'text-decoration:line-through;color:var(--text3)':''}">${f.name||'Novo lugar'}</span>
+          <span style="font-size:13px;font-weight:500;${f.done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)'}">${f.name||'Novo lugar'}</span>
           ${f.time?`<span style="font-size:11px;color:var(--text3);display:inline-flex;align-items:center;gap:2px;flex-shrink:0"><i class="ti ti-clock" style="font-size:11px"></i>${f.time}</span>`:''}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
         <span class="food-item-pill ${cm.cls}"><i class="ti ${cm.icon}" style="font-size:10px"></i>${cm.label}</span>
         ${f.lat&&f.lng?'<span class="v-geo-dot"></span>':''}
+        ${f.comment?'<span class="v-comment-dot"></span>':''}
         <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3)"></i>
       </div>
     </div>`;}
@@ -1586,6 +1586,21 @@ function toggleExpandFood(di,fi){const k=di+'_'+fi;if(expandedFoods.has(k))expan
 function updFood(di,fi,field,val){trips[cur].days[di].foods[fi][field]=val;save();}
 function toggleFood(di,fi){trips[cur].days[di].foods[fi].done=!trips[cur].days[di].foods[fi].done;save();renderDay();}
 function saveFood(di,fi){save();expandedFoods.delete(di+'_'+fi);renderDay();toast('Lugar salvo! ✓');}
+function toggleFoodComment(di,fi){
+  const k=di+'_'+fi;
+  if(expandedFoodComments.has(k))expandedFoodComments.delete(k);else expandedFoodComments.add(k);
+  renderDay();
+  if(expandedFoodComments.has(k)){setTimeout(()=>{const ta=document.getElementById('fcmt_'+di+'_'+fi);if(ta)ta.focus();},50);}
+}
+function saveFoodComment(di,fi){
+  const ta=document.getElementById('fcmt_'+di+'_'+fi);
+  if(!ta)return;
+  trips[cur].days[di].foods[fi].comment=ta.value.trim();
+  save();
+  if(!ta.value.trim())expandedFoodComments.delete(di+'_'+fi);
+  renderDay();
+  toast('Comentário salvo!');
+}
 function deleteDay(di){const trip=trips[cur];if(trip.days.length<=1){toast('Mínimo 1 dia');return;}if(!confirm('Remover este dia?'))return;trip.days.splice(di,1);trip.days.forEach((d,i)=>d.num=i+1);curDay=Math.min(curDay,trip.days.length-1);save();renderTrip();}
 
 /* ═══════════════════════════════════════════
