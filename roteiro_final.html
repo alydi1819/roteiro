@@ -1357,7 +1357,7 @@ async function loadTripsDB(){
   const merged=all.filter(t=>{if(seen.has(t.id))return false;seen.add(t.id);return true;});
   for(const t of merged){
     const{data:drows}=await sb.from('trip_days').select('*').eq('trip_id',t.id).order('day_num');
-    t.start=t.start_date;t.end=t.end_date;
+    t.start=t.start_date;t.end=t.end_date;t.routes=t.routes||[];
     t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',_openTrKey:d.open_tr_key||null}));
   }
   trips=merged;
@@ -1448,7 +1448,12 @@ function saveNotes(){clearTimeout(_nt);_nt=setTimeout(()=>{const c=document.getE
 function subscribeRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
   realtimeSub=sb.channel('rt-'+currentUser.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'trip_days'},payload=>{
-    for(const t of trips){const di=t.days.findIndex(d=>d.id===payload.new.id);if(di>=0){const d=payload.new;t.days[di]={...t.days[di],title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||''};if(cur!==null&&trips[cur]?.id===t.id)renderDay();break;}}
+    for(const t of trips){const di=t.days.findIndex(d=>d.id===payload.new.id);if(di>=0){const d=payload.new;t.days[di]={...t.days[di],title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||''};if(cur!==null&&trips[cur]?.id===t.id){
+          // Don't re-render if user is actively typing in a field
+          const active=document.activeElement;
+          const isTyping=active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA');
+          if(!isTyping)renderDay();
+        }break;}}
   }).subscribe();
 }
 function renderHome(){
