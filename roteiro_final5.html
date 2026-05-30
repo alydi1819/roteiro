@@ -1526,7 +1526,7 @@ function buildFoodSection(di){
         ${buildLocSearch('food_'+di+'_'+fi,f.lat,f.lng,f.locName||f.name)}
         <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveFood(${di},${fi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
         <button class="comment-toggle-btn ${f.comment?'has-comment':''}" onclick="toggleFoodComment(${di},${fi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${f.comment?'Ver comentário':'Adicionar comentário'}</button>
-        ${expCmtF?'<div class="comment-panel"><textarea id="fcmt_'+di+'_'+fi+'" placeholder="Escreva um comentário sobre este lugar...">'+( f.comment||'')+'</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveFoodComment('+di+','+fi+')"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>':''}
+        ${expandedFoodComments.has(fi)?`<div class="comment-panel"><textarea id="fcmt_${di}_${fi}" placeholder="Escreva um comentário sobre este lugar...">${f.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveFoodComment(${di},${fi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
     else{return`<div class="visit-collapsed ${f.done?'done-item':''}" onclick="toggleExpandFood(${di},${fi})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
       <div class="v-check ${f.done?'on':''}" onclick="event.stopPropagation();toggleFood(${di},${fi})" style="width:18px;height:18px;border:1.5px solid ${f.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${f.done?'var(--success)':'var(--surface)'}">${f.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
@@ -1587,17 +1587,16 @@ function updFood(di,fi,field,val){trips[cur].days[di].foods[fi][field]=val;save(
 function toggleFood(di,fi){trips[cur].days[di].foods[fi].done=!trips[cur].days[di].foods[fi].done;save();renderDay();}
 function saveFood(di,fi){save();toast('Lugar salvo! ✓');}
 function toggleFoodComment(di,fi){
-  const k=di+'_'+fi;
-  if(expandedFoodComments.has(k))expandedFoodComments.delete(k);else expandedFoodComments.add(k);
+  if(expandedFoodComments.has(fi))expandedFoodComments.delete(fi);else expandedFoodComments.add(fi);
   renderDay();
-  if(expandedFoodComments.has(k)){setTimeout(()=>{const ta=document.getElementById('fcmt_'+di+'_'+fi);if(ta)ta.focus();},50);}
+  if(expandedFoodComments.has(fi)){setTimeout(()=>{const ta=document.getElementById('fcmt_'+di+'_'+fi);if(ta)ta.focus();},50);}
 }
 function saveFoodComment(di,fi){
   const ta=document.getElementById('fcmt_'+di+'_'+fi);
   if(!ta)return;
   trips[cur].days[di].foods[fi].comment=ta.value.trim();
   save();
-  if(!ta.value.trim())expandedFoodComments.delete(di+'_'+fi);
+  if(!ta.value.trim())expandedFoodComments.delete(fi);
   renderDay();
   toast('Comentário salvo!');
 }
