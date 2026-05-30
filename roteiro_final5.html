@@ -380,8 +380,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 /* ── ONDE COMER ── */
 --green:#1B7A42;--green-bg:#E8F5EE;--green-border:#9FD4B8;
-.food-cat-filter{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-.food-cat-btn{border:1.5px solid var(--border2);border-radius:20px;padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
+.food-cat-filter{display:flex;gap:6px;margin-bottom:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.food-cat-filter::-webkit-scrollbar{display:none}
+.food-cat-btn{border:1.5px solid var(--border2);border-radius:20px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap;flex-shrink:0}
 .food-cat-btn:hover{border-color:var(--orange2);color:var(--orange)}
 .food-cat-btn.active-meal{background:#FEF3E8;border-color:var(--orange);color:var(--orange)}
 .food-cat-btn.active-dessert{background:#FDF2F8;border-color:#C026D3;color:#C026D3}
