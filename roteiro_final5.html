@@ -735,7 +735,7 @@ function saveLocLink(fieldId){
   const parts=fieldId.split('_');const type=parts[0];
   if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
   else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
-  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';save();renderDay();}
+  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&!trips[cur].days[di].foods[fi].name)trips[cur].days[di].foods[fi].name=locName;save();renderDay();}
   toast('Localização salva!');
 }
 function clearLocLink(fieldId){
