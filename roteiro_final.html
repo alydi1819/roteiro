@@ -1210,9 +1210,63 @@ function viewAttach(data,name){
   else{c.innerHTML=`<a href="${data}" download="${name}" class="btn-p" style="text-decoration:none;display:inline-flex"><i class="ti ti-download"></i> Baixar ${name}</a>`;}
   document.getElementById('viewAttachModal').classList.add('open');
 }
-function attachHotel(di,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{trips[cur].days[di].hotelAttachName=f.name;trips[cur].days[di].hotelAttachData=e.target.result;save();renderDay();};r.readAsDataURL(f);}
+function attachHotel(di,inp){
+  const f=inp.files[0];if(!f)return;
+  if(f.size>2*1024*1024){toast('Arquivo muito grande. Use menos de 2MB');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const data=e.target.result;
+    if(f.type.startsWith('image/')){
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const max=800;let w=img.width,h=img.height;
+        if(w>max){h=h*(max/w);w=max;}if(h>max){w=w*(max/h);h=max;}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        trips[cur].days[di].hotelAttachName=f.name;
+        trips[cur].days[di].hotelAttachData=canvas.toDataURL('image/jpeg',0.7);
+        save();renderDay();
+      };img.src=data;
+    } else {
+      trips[cur].days[di].hotelAttachName=f.name;
+      trips[cur].days[di].hotelAttachData=data;
+      save();renderDay();
+    }
+  };r.readAsDataURL(f);
+}
 function rmHotelAttach(di){trips[cur].days[di].hotelAttachName='';trips[cur].days[di].hotelAttachData='';save();renderDay();}
-function attachVisitTicket(di,vi,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{trips[cur].days[di].visits[vi].ticketName=f.name;trips[cur].days[di].visits[vi].ticketData=e.target.result;save();renderDay();};r.readAsDataURL(f);}
+function attachVisitTicket(di,vi,inp){
+  const f=inp.files[0];if(!f)return;
+  if(f.size>2*1024*1024){toast('Arquivo muito grande. Use menos de 2MB');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const data=e.target.result;
+    // Compress images, keep PDFs as-is
+    if(f.type.startsWith('image/')){
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const max=800;
+        let w=img.width,h=img.height;
+        if(w>max){h=h*(max/w);w=max;}
+        if(h>max){w=w*(max/h);h=max;}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        const compressed=canvas.toDataURL('image/jpeg',0.7);
+        trips[cur].days[di].visits[vi].ticketName=f.name;
+        trips[cur].days[di].visits[vi].ticketData=compressed;
+        save();renderDay();
+      };
+      img.src=data;
+    } else {
+      trips[cur].days[di].visits[vi].ticketName=f.name;
+      trips[cur].days[di].visits[vi].ticketData=data;
+      save();renderDay();
+    }
+  };
+  r.readAsDataURL(f);
+}
 function rmVisitTicket(di,vi){trips[cur].days[di].visits[vi].ticketName='';trips[cur].days[di].visits[vi].ticketData='';save();renderDay();}
 
 /* ═══════════════════════════════════════════
@@ -1368,8 +1422,17 @@ function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
     const day=trips[cur]?.days[curDay];if(!day?.id)return;
-    sb.from('trip_days').update({title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:day.hotelAttachData||'',transports:day.transports||[],visits:day.visits||[],transfers:day.transfers||[],notes:day.notes||'',open_tr_key:day._openTrKey||''}).eq('id',day.id)
-    .then(({error})=>{if(error)console.error('save error:',error);});
+    // Strip large base64 data from visits for saving (keep name only)
+    const visitsToSave=(day.visits||[]).map(v=>({...v}));
+    const hotelData=day.hotelAttachData||'';
+    sb.from('trip_days').update({
+      title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',
+      hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',
+      hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:hotelData,
+      transports:day.transports||[],visits:visitsToSave,
+      transfers:day.transfers||[],notes:day.notes||'',open_tr_key:day._openTrKey||''
+    }).eq('id',day.id)
+    .then(({error})=>{if(error){console.error('save error:',error);toast('Erro ao salvar: '+error.message);}});
   },1200);
 }
 async function createTripInDB(name,status,start,end,days){
