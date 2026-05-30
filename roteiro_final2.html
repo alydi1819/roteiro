@@ -1403,7 +1403,12 @@ function toggleExpandVisit(vi){if(expandedVisits.has(vi))expandedVisits.delete(v
 function updDay(di,f,v){trips[cur].days[di][f]=v;save();}
 function updVisit(di,vi,f,v){trips[cur].days[di].visits[vi][f]=v;save();}
 function toggleVisit(di,vi){const v=trips[cur].days[di].visits[vi];v.done=!v.done;save();renderDay();}
-function rmVisit(di,vi){trips[cur].days[di].visits.splice(vi,1);expandedVisits.delete(vi);save();renderDay();}
+function rmVisit(di,vi){
+  if(!confirm('Excluir "'+( trips[cur].days[di].visits[vi].name||'este local')+'"?'))return;
+  trips[cur].days[di].visits.splice(vi,1);
+  expandedVisits.delete(vi);
+  save();renderDay();
+}
 function addVisit(di){if(!trips[cur].days[di].visits)trips[cur].days[di].visits=[];const ni=trips[cur].days[di].visits.length;trips[cur].days[di].visits.push({name:'',metro:'',lat:'',lng:'',done:false,ticketName:'',ticketData:''});expandedVisits.add(ni);save();renderDay();}
 function deleteDay(di){const trip=trips[cur];if(trip.days.length<=1){toast('Mínimo 1 dia');return;}if(!confirm('Remover este dia?'))return;trip.days.splice(di,1);trip.days.forEach((d,i)=>d.num=i+1);curDay=Math.min(curDay,trip.days.length-1);save();renderTrip();}
 
