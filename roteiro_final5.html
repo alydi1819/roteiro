@@ -1070,7 +1070,7 @@ function renderDay(){
   const openTrKey=day._openTrKey||null;
   let openTrDetail='';
   if(openTrKey){
-    const tr=trActive.find(t=>t.mode===openTrKey)||{mode:openTrKey,desc:'',value:'',paid:false,ticketName:'',ticketData:''};
+    const tr=trActive.find(t=>t.mode===openTrKey)||{mode:openTrKey,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:''};
     const opt=TR_OPTS.find(o=>o.k===openTrKey)||{icon:'ti-route',label:'Transporte'};
     openTrDetail=`<div class="transport-detail"><h4><i class="ti ${opt.icon}"></i>${opt.label}</h4>
     <div class="td-row"><div class="td-field"><label>Descrição</label><input id="trDesc_${di}_${openTrKey}" value="${tr.desc||''}" placeholder="Ex: Linha 2, Uber..."></div><div class="td-field"><label>Valor</label><input id="trVal_${di}_${openTrKey}" value="${tr.value||''}" placeholder="R$ 30"></div></div>
@@ -1368,9 +1368,9 @@ function rmVisitTicket(di,vi){trips[cur].days[di].visits[vi].ticketName='';trips
 function saveTrLocal(di,key){
   const desc=document.getElementById('trDesc_'+di+'_'+key);const val=document.getElementById('trVal_'+di+'_'+key);const cmt=document.getElementById('trCmt_'+di+'_'+key);
   const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);
-  if(idx>=0){if(desc)trips[cur].days[di].transports[idx].desc=desc.value;if(val)trips[cur].days[di].transports[idx].value=val.value;if(cmt)trips[cur].days[di].transports[idx].comment=cmt.value;save();toast('Transporte salvo!');}
+  if(idx>=0){if(desc)trips[cur].days[di].transports[idx].desc=desc.value;if(val)trips[cur].days[di].transports[idx].value=val.value;if(cmt)trips[cur].days[di].transports[idx].comment=cmt.value;save();toast('Transporte salvo!');renderDay();}
 }
-function toggleLocalTr(di,key){const day=trips[cur].days[di];day._openTrKey=day._openTrKey===key?null:key;if(day._openTrKey&&!day.transports.find(t=>t.mode===key))day.transports.push({mode:key,desc:'',value:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
+function toggleLocalTr(di,key){const day=trips[cur].days[di];day._openTrKey=day._openTrKey===key?null:key;if(day._openTrKey&&!day.transports.find(t=>t.mode===key))day.transports.push({mode:key,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
 function togglePaidLocalByKey(di,key){const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].paid=!trips[cur].days[di].transports[idx].paid;save();renderDay();}}
 function removeLocalTrByKey(di,key){const day=trips[cur].days[di];day.transports=day.transports.filter(t=>t.mode!==key);day._openTrKey=null;save();renderDay();}
 function attachTicketLocalByKey(di,key,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].ticketName=f.name;trips[cur].days[di].transports[idx].ticketData=e.target.result;save();renderDay();}};r.readAsDataURL(f);}
