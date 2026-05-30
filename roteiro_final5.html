@@ -734,7 +734,7 @@ function saveLocLink(fieldId){
   } else {lat='name';lng=raw;locName=raw;}
   const parts=fieldId.split('_');const type=parts[0];
   if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
-  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';save();renderDay();}
+  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
   else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';save();renderDay();}
   toast('Localização salva!');
 }
@@ -982,7 +982,7 @@ function saveRouteConfig(){
 /* ═══════════════════════════════════════════
    DAY RENDER
 ═══════════════════════════════════════════ */
-const TR_OPTS=[{k:'plane',icon:'ti-plane',label:'Avião'},{k:'car',icon:'ti-car',label:'Carro'},{k:'bus',icon:'ti-bus',label:'Ônibus'},{k:'train',icon:'ti-train',label:'Trem'},{k:'metro',icon:'ti-train',label:'Metrô',isMet:true},{k:'ship',icon:'ti-sailboat',label:'Barco'},{k:'bike',icon:'ti-bike',label:'Bicicleta'},{k:'walk',icon:'ti-walk',label:'A pé'},{k:'taxi',icon:'ti-taxi',label:'Táxi'}];
+const TR_OPTS=[{k:'plane',icon:'ti-plane',label:'Avião'},{k:'bus',icon:'ti-bus',label:'Ônibus'},{k:'train',icon:'ti-train',label:'Trem'},{k:'metro',icon:'ti-train',label:'Metrô',isMet:true},{k:'ship',icon:'ti-sailboat',label:'Barco'},{k:'bike',icon:'ti-bike',label:'Bicicleta'}];
 
 function sortByProximity(pts){
   if(pts.length<=2)return pts;
@@ -998,9 +998,15 @@ function buildSmartRouteBtn(di){
   const ordered=hasOnlyCoords?sortByProximity(visits.slice()):visits;
   const wp=ordered.map(v=>{if(v.lat==='name')return encodeURIComponent(v.lng);if(v.lat==='link')return null;return v.lat+','+v.lng;}).filter(Boolean);
   if(!wp.length)return'<div style="font-size:11px;color:var(--text3);text-align:center;padding:6px 0">Adicione localização nos locais para gerar rota</div>';
-  const url=wp.length===1?'https://www.google.com/maps/search/'+wp[0]:'https://www.google.com/maps/dir/'+wp.join('/');
-  return'<a href="'+url+'" target="_blank" class="smart-route-btn"><i class="ti ti-route"></i> Rota inteligente no Maps ('+wp.length+' local'+(wp.length>1?'is':'')+')</a>';
+  const hasHotel=day.hotelLat&&day.hotelLng;
+  const useHotel=day._visitRouteFromHotel&&hasHotel;
+  const hotelCheckHtml=hasHotel?`<label class="food-hotel-start" style="margin-bottom:8px"><input type="checkbox" ${useHotel?'checked':''} onchange="toggleVisitHotelStart(${di},this.checked)"><i class="ti ti-bed" style="font-size:13px;flex-shrink:0"></i> Partir da hospedagem</label>`:'';
+  let urlParts=[...wp];
+  if(useHotel){let hp='';if(day.hotelLat==='link')hp='';else if(day.hotelLat==='name')hp=encodeURIComponent(day.hotelLng);else hp=day.hotelLat+','+day.hotelLng;if(hp)urlParts=[hp,...urlParts];}
+  const url=urlParts.length===1?'https://www.google.com/maps/search/'+urlParts[0]:'https://www.google.com/maps/dir/'+urlParts.join('/');
+  return hotelCheckHtml+'<a href="'+url+'" target="_blank" class="smart-route-btn"><i class="ti ti-route"></i> Rota inteligente no Maps ('+wp.length+' local'+(wp.length>1?'is':'')+')</a>';
 }
+function toggleVisitHotelStart(di,val){trips[cur].days[di]._visitRouteFromHotel=val;save();renderDay();}
 
 function moveVisitToNextDay(di,vi){
   const trip=trips[cur];
@@ -1050,6 +1056,7 @@ function renderDay(){
           <button class="btn-p" style="padding:8px 14px;font-size:12px;justify-content:center;width:100%" onclick="saveTrFields(${di},${ti})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>
         </div>
       </div>
+      <div class="td-field" style="margin-top:4px"><label>Comentário</label><textarea id="tr_cmt_${di}_${ti}" placeholder="Observações sobre esta transferência..." style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:56px;line-height:1.4" onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='var(--border2)'">${tr.comment||''}</textarea></div>
       ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketTr(${di},${ti})"><i class="ti ti-x"></i></button></div>`:''}
       <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketTr(${di},${ti},this)"></label>
       `:''}
@@ -1067,6 +1074,7 @@ function renderDay(){
     const opt=TR_OPTS.find(o=>o.k===openTrKey)||{icon:'ti-route',label:'Transporte'};
     openTrDetail=`<div class="transport-detail"><h4><i class="ti ${opt.icon}"></i>${opt.label}</h4>
     <div class="td-row"><div class="td-field"><label>Descrição</label><input id="trDesc_${di}_${openTrKey}" value="${tr.desc||''}" placeholder="Ex: Linha 2, Uber..."></div><div class="td-field"><label>Valor</label><input id="trVal_${di}_${openTrKey}" value="${tr.value||''}" placeholder="R$ 30"></div></div>
+    <div class="td-field" style="margin-top:8px"><label>Comentário</label><textarea id="trCmt_${di}_${openTrKey}" placeholder="Observações sobre este transporte..." style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:60px;line-height:1.4;transition:border-color .15s" onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='var(--border2)'">${tr.comment||''}</textarea></div>
     <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="rm-btn" onclick="removeLocalTrByKey(${di},'${openTrKey}')"><i class="ti ti-trash"></i> Remover</button></div>
     ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketLocalByKey(${di},'${openTrKey}')"><i class="ti ti-x"></i></button></div>`:''}
     <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketLocalByKey(${di},'${openTrKey}',this)"></label>
@@ -1111,7 +1119,6 @@ function renderDay(){
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        ${v.metro?'<span class="v-metro-pill" style="white-space:nowrap"><i class="ti ti-train"></i>'+v.metro+'</span>':''}
         ${hasGeo?'<span class="v-geo-dot"></span>':''}
         ${v.ticketName?'<span class="v-ticket-dot"></span>':''}
         ${v.comment?'<span class="v-comment-dot"></span>':''}
@@ -1380,9 +1387,11 @@ function saveTrFields(di,ti){
   const res=document.getElementById('tr_res_'+di+'_'+ti);
   const dep=document.getElementById('tr_dep_'+di+'_'+ti);
   const arr=document.getElementById('tr_arr_'+di+'_'+ti);
+  const cmt=document.getElementById('tr_cmt_'+di+'_'+ti);
   if(res)trips[cur].days[di].transfers[ti].reservation=res.value;
   if(dep)trips[cur].days[di].transfers[ti].depTime=dep.value;
   if(arr)trips[cur].days[di].transfers[ti].arrTime=arr.value;
+  if(cmt)trips[cur].days[di].transfers[ti].comment=cmt.value;
   save();toast('Transferência salva!');renderDay();
 }
 function updTr(di,ti,f,v){trips[cur].days[di].transfers[ti][f]=v;save();}
