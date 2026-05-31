@@ -872,17 +872,6 @@ function applyLocLink(fieldId,lat,lng,locName,placeName){
   else if(type==='role'){const di=parseInt(parts[1]),ri=parseInt(parts[2]);trips[cur].days[di].roles[ri].lat=lat;trips[cur].days[di].roles[ri].lng=lng;trips[cur].days[di].roles[ri].locName=locName||'Local salvo';if(pn&&pn!=='Localização salva'&&pn!=='Local salvo')trips[cur].days[di].roles[ri].name=pn;save();renderDay();}
 }
 
-async function nominatimSearch(name){
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
-    const data=await r.json();
-    if(data&&data.length){
-      const shortAddr=data[0].display_name.split(',').slice(0,2).join(', ');
-      return{lat:data[0].lat,lng:data[0].lon,locName:shortAddr};
-    }
-  }catch{}
-  return null;
-}
 
 async function saveLocLink(fieldId){
   const inp=document.getElementById('lsi_'+fieldId);
@@ -2418,24 +2407,59 @@ function renderNearbyItem(item,distM,mapUrl){
   </div>`;
 }
 
-async function resolveItemCoords(item){
-  // Already has real coords
+async function nominatimSearch(name,cityContext){
+  try{
+    // Add city context if available to improve accuracy
+    const q=cityContext?`${name}, ${cityContext}`:name;
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
+    const data=await r.json();
+    if(data&&data.length){
+      const shortAddr=data[0].display_name.split(',').slice(0,2).join(', ');
+      return{lat:data[0].lat,lng:data[0].lon,locName:shortAddr};
+    }
+    // If no result with context, try without
+    if(cityContext){
+      const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
+      const data2=await r2.json();
+      if(data2&&data2.length)return{lat:data2[0].lat,lng:data2[0].lon,locName:data2[0].display_name.split(',').slice(0,2).join(', ')};
+    }
+  }catch{}
+  return null;
+}
+
+async function resolveItemCoords(item,cityContext){
+  // Already has real numeric coords
   const c=parseItemCoords(item);
   if(c)return c;
-  // Has a name or locName — try Nominatim
-  const query=item.name||item.locName||null;
-  if(!query||query==='Localização salva'||query==='Local salvo')return null;
-  const r=await nominatimSearch(query);
+
+  // lat='link' — short URL saved, try Edge Function to resolve it
+  if(item.lat==='link'&&item.lng&&item.lng.startsWith('http')){
+    try{
+      const res=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:item.lng})});
+      const data=await res.json();
+      if(data.lat&&data.lng)return{lat:parseFloat(data.lat),lng:parseFloat(data.lng)};
+      // Got name from edge function — fall through to Nominatim with it
+      if(data.name){
+        const nr=await nominatimSearch(data.name,cityContext);
+        if(nr)return{lat:parseFloat(nr.lat),lng:parseFloat(nr.lng)};
+      }
+    }catch{}
+  }
+
+  // Try Nominatim with item name + city context
+  const query=item.name||(item.locName!=='Localização salva'&&item.locName!=='Local salvo'?item.locName:null)||null;
+  if(!query)return null;
+  const r=await nominatimSearch(query,cityContext);
   if(r)return{lat:parseFloat(r.lat),lng:parseFloat(r.lng)};
   return null;
 }
 
-async function renderNearbySection(containerId,items,userLat,userLng){
+async function renderNearbySection(containerId,items,userLat,userLng,cityContext){
   const el=document.getElementById(containerId);if(!el)return;
   if(!items||!items.length){el.innerHTML=`<div class="nearby-empty">Nenhum item com localização salva para hoje.<br>Adicione coordenadas nas atrações do roteiro.</div>`;return;}
   el.innerHTML=`<div class="nearby-loading"><div class="spin-sm"></div> Calculando distâncias...</div>`;
   const resolved=await Promise.all(items.map(async item=>{
-    const c=await resolveItemCoords(item);
+    const c=await resolveItemCoords(item,cityContext);
     const d=c?haversine(userLat,userLng,c.lat,c.lng):null;
     const url=mapsLink(item.lat,item.lng,item.name||item.locName);
     return{item,d,url};
@@ -2536,10 +2560,13 @@ function initNearby(){
     const today=new Date().toISOString().split('T')[0];
     const dateLabel=td&&td.day.date===today?'hoje':(td?`dia ${fmtShort(td.day.date)}`:'nenhuma viagem');
 
+    // Extract city context from trip routes for better Nominatim accuracy
+    const cityContext=td?getCityForDay(td.trip,td.day.date)||td.trip.name||null:null;
+
     // Visits
     const visitEl=document.getElementById('nearbyVisitResult');
     if(td&&td.day.visits&&td.day.visits.length){
-      renderNearbySection('nearbyVisitResult',td.day.visits,lat,lng);
+      renderNearbySection('nearbyVisitResult',td.day.visits,lat,lng,cityContext);
     } else {
       visitEl.innerHTML=`<div class="nearby-empty">Sem atrações no roteiro de ${dateLabel}.</div>`;
     }
@@ -2547,7 +2574,7 @@ function initNearby(){
     // Foods
     const foodEl=document.getElementById('nearbyFoodResult');
     if(td&&td.day.foods&&td.day.foods.length){
-      renderNearbySection('nearbyFoodResult',td.day.foods,lat,lng);
+      renderNearbySection('nearbyFoodResult',td.day.foods,lat,lng,cityContext);
     } else {
       foodEl.innerHTML=`<div class="nearby-empty">Sem opções de alimentação no roteiro de ${dateLabel}.</div>`;
     }
@@ -2555,7 +2582,7 @@ function initNearby(){
     // Roles (rolezinhos)
     const roleEl=document.getElementById('nearbyRoleResult');
     if(td&&td.day.roles&&td.day.roles.length){
-      renderNearbySection('nearbyRoleResult',td.day.roles,lat,lng);
+      renderNearbySection('nearbyRoleResult',td.day.roles,lat,lng,cityContext);
     } else {
       roleEl.innerHTML=`<div class="nearby-empty">Sem rolezinhos no roteiro de ${dateLabel}.</div>`;
     }
