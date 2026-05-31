@@ -2339,13 +2339,22 @@ async function fetchNearestMetro(lat,lng){
       return elat&&elon?{...n,lat:elat,lon:elon}:null;
     }).filter(Boolean);
     if(!elems.length){el.innerHTML=`<div class="nearby-empty">Nenhuma estação encontrada num raio de 5km.<br>Verifique sua localização.</div>`;return;}
-    // deduplicate by name, keeping closest node per name
+    // normalize name for dedup: lowercase, no accents, strip common prefixes
+    function normName(s){
+      return s.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/^(estacao|estação|station|metro|metrô|trem|cptm)\s+/i,'')
+        .replace(/\s+(station|metro|metrô)$/i,'')
+        .trim();
+    }
+    // deduplicate by normalized name, keeping closest node per name
     const byName={};
     for(const n of elems){
-      const name=n.tags?.name||n.tags?.['name:pt']||'';
-      if(!name)continue;
+      const rawName=n.tags?.name||n.tags?.['name:pt']||'';
+      if(!rawName)continue;
+      const key=normName(rawName);
       const dist=haversine(lat,lng,n.lat,n.lon);
-      if(!byName[name]||dist<byName[name].dist)byName[name]={...n,dist};
+      if(!byName[key]||dist<byName[key].dist)byName[key]={...n,dist};
     }
     // also include unnamed entries
     const unnamed=elems.filter(n=>!(n.tags?.name||n.tags?.['name:pt'])).map(n=>({...n,dist:haversine(lat,lng,n.lat,n.lon)}));
