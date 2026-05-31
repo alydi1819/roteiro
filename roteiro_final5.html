@@ -1103,7 +1103,7 @@ function renderDay(){
         <div class="field-label">LOCALIZAÇÃO</div>
         ${buildLocSearch('visit_'+di+'_'+vi,v.lat,v.lng,v.locName||v.name)}
         <div class="field-label">INGRESSO</div>
-        ${v.ticketName?`<div class="attach-file" onclick="viewAttach('${v.ticketData||''}','${v.ticketName}',trips[cur].days[di].id,'visit_'+${vi}+'_ticket')"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
+        ${v.ticketName?`<div class="attach-file" onclick="viewVisitTicket(${di},${vi})"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
         <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${vi},this)"></label>
         <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${vi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
         ${di<trips[cur].days.length-1?`<button onclick="moveVisitToNextDay(${di},${vi})" style="width:100%;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Passar pro dia ${trips[cur].days[di+1].num}</button>`:''}
@@ -1140,7 +1140,7 @@ function renderDay(){
       <div class="field-label">LOCALIZAÇÃO</div>${buildLocSearch(hotelFid,hLat,hLng,day.hotelLocName)}
       <div class="field-label">RESERVA</div>
       <div class="in-icon" style="margin-bottom:8px"><i class="ti ti-hash ico"></i><input value="${day.hotelReserva||''}" placeholder="Número da reserva..." oninput="updDay(${di},'hotelReserva',this.value)"></div>
-      ${day.hotelAttachName?`<div class="attach-file" onclick="viewAttach('${day.hotelAttachData}','${day.hotelAttachName}')"><i class="ti ti-file file-ico"></i><span class="fname">${day.hotelAttachName}</span><button class="rm" onclick="event.stopPropagation();rmHotelAttach(${di})"><i class="ti ti-x"></i></button></div>`:''}
+      ${day.hotelAttachName?`<div class="attach-file" onclick="viewHotelAttach(${di})"><i class="ti ti-file file-ico"></i><span class="fname">${day.hotelAttachName}</span><button class="rm" onclick="event.stopPropagation();rmHotelAttach(${di})"><i class="ti ti-x"></i></button></div>`:''}
       <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar reserva<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachHotel(${di},this)"></label>
     </div></div>
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-route"></i> Meios de transporte do dia</h3></div>
@@ -1294,6 +1294,23 @@ function saveNotes(){
 /* ═══════════════════════════════════════════
    ATTACHMENTS
 ═══════════════════════════════════════════ */
+function viewVisitTicket(di,vi){
+  const v=trips[cur]?.days[di]?.visits[vi];
+  if(!v){toast('Arquivo não disponível');return;}
+  if(v.ticketData){viewAttach(v.ticketData,v.ticketName);return;}
+  const dayId=trips[cur].days[di].id;
+  const refKey='visit_'+vi+'_ticket';
+  loadAttachmentFromDb(dayId,refKey).then(data=>{
+    if(data){v.ticketData=data;viewAttach(data,v.ticketName);}
+    else toast('Arquivo não encontrado');
+  });
+}
+function viewHotelAttach(di){
+  const day=trips[cur]?.days[di];
+  if(!day){toast('Arquivo não disponível');return;}
+  if(day.hotelAttachData){viewAttach(day.hotelAttachData,day.hotelAttachName);return;}
+  toast('Arquivo não disponível');
+}
 function viewAttach(data,name){
   if(!data){toast('Arquivo não disponível');return;}
   document.getElementById('viewAttachTitle').textContent=name;
