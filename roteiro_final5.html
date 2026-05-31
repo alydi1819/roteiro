@@ -192,8 +192,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .tr-btn{border:1.5px solid var(--border2);border-radius:20px;padding:7px 13px;font-size:12px;cursor:pointer;background:transparent;color:var(--text2);display:flex;align-items:center;gap:5px;font-family:inherit;transition:all .15s}
 .tr-btn:hover{border-color:var(--blue2)}
 .tr-btn.has-obs{border-color:var(--orange);background:var(--orange-bg);color:var(--orange);font-weight:500}
-.tr-btn.metro-btn{border-color:var(--metro-border);color:var(--metro)}
-.tr-btn.metro-btn.has-obs{background:var(--metro-bg);border-color:var(--metro)}
+.tr-btn.metro-btn.has-obs{background:var(--metro-bg);border-color:var(--metro);color:var(--metro)}
 .tr-btn i{font-size:15px}
 .transport-detail{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;margin-top:10px;overflow:hidden}
 .transport-detail h4{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:10px;display:flex;align-items:center;gap:5px}
@@ -1108,8 +1107,8 @@ function renderDay(){
     const canPrev=di>0&&(getCityForDay(trip,trip.days[di-1].date)||'')=== curCity;
     const canNext=di<trip.days.length-1;
     const dayMoveButtons=(canPrev||canNext)?`<div style="display:flex;gap:6px;margin-top:6px">
-      ${canPrev?`<button onclick="moveVisitToPrevDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--blue-border);color:var(--blue2);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-left" style="font-size:14px"></i> Dia ${trip.days[di-1].num}</button>`:''}
-      ${canNext?`<button onclick="moveVisitToNextDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Dia ${trip.days[di+1].num}</button>`:''}
+      ${canPrev?`<button onclick="moveVisitToPrevDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--blue-border);color:var(--blue2);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-left" style="font-size:14px"></i> Voltar</button>`:''}
+      ${canNext?`<button onclick="moveVisitToNextDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Próximo</button>`:''}
     </div>`:'';
     if(isExp){return`<div class="visit-expanded">
       <div class="visit-expanded-hdr" onclick="toggleExpandVisit(${realVi})">
