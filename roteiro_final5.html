@@ -892,19 +892,14 @@ async function acInput(fieldId){
     box.style.display='block';
     box.innerHTML=`<div class="loc-ac-item"><i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i><div class="loc-ac-name">Buscando...</div></div>`;
     try{
-      const r=await fetch(`https://places.googleapis.com/v1/places:autocomplete`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-Goog-Api-Key':GOOGLE_PLACES_KEY},
-        body:JSON.stringify({input:val,languageCode:'pt-BR'})
-      });
+      const r=await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(val)}&language=pt-BR&key=${GOOGLE_PLACES_KEY}`);
       const data=await r.json();
-      const suggestions=data.suggestions||[];
-      if(!suggestions.length){box.innerHTML=`<div class="loc-ac-item" style="color:var(--text3)"><i class="ti ti-map-off"></i><div class="loc-ac-name">Nenhum resultado encontrado</div></div>`;return;}
-      box.innerHTML=suggestions.map(s=>{
-        const pl=s.placePrediction;
-        const main=pl.structuredFormat?.mainText?.text||pl.text?.text||'';
-        const secondary=pl.structuredFormat?.secondaryText?.text||'';
-        const placeId=pl.placeId||'';
+      const predictions=data.predictions||[];
+      if(!predictions.length){box.innerHTML=`<div class="loc-ac-item" style="color:var(--text3)"><i class="ti ti-map-off"></i><div class="loc-ac-name">Nenhum resultado encontrado</div></div>`;return;}
+      box.innerHTML=predictions.map(p=>{
+        const main=p.structured_formatting?.main_text||p.description||'';
+        const secondary=p.structured_formatting?.secondary_text||'';
+        const placeId=p.place_id||'';
         return`<div class="loc-ac-item" onclick="acSelect('${fieldId}','${placeId}','${encodeURIComponent(main)}','${encodeURIComponent(secondary)}')">
           <i class="ti ti-map-pin"></i>
           <div style="min-width:0"><div class="loc-ac-name">${main}</div><div class="loc-ac-addr">${secondary}</div></div>
@@ -923,12 +918,11 @@ async function acSelect(fieldId,placeId,encodedName,encodedAddr){
   const addr=decodeURIComponent(encodedAddr);
   if(inp)inp.value=name;
   if(box)box.style.display='none';
-  // Fetch place details to get coordinates
   try{
-    const r=await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=location,displayName&key=${GOOGLE_PLACES_KEY}`);
+    const r=await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${GOOGLE_PLACES_KEY}`);
     const data=await r.json();
-    const lat=data.location?.latitude;
-    const lng=data.location?.longitude;
+    const lat=data.result?.geometry?.location?.lat;
+    const lng=data.result?.geometry?.location?.lng;
     if(lat&&lng){
       _acSessions[fieldId]={lat:String(lat),lng:String(lng),name,locName:addr||name};
       toast('Local encontrado! Toca Salvar 📍');
