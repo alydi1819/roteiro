@@ -2326,29 +2326,46 @@ function renderNearbySection(containerId,items,userLat,userLng){
 
 async function fetchNearestMetro(lat,lng){
   const el=document.getElementById('nearbyMetroResult');
-  // Use Overpass API to find nearest metro/train station
-  const query=`[out:json][timeout:10];(node["station"="subway"](around:5000,${lat},${lng});node["railway"="station"](around:5000,${lat},${lng});node["railway"="subway_entrance"](around:3000,${lat},${lng}););out body 10;`;
+  const query=`[out:json][timeout:15];(node["station"="subway"](around:5000,${lat},${lng});node["station"="light_rail"](around:5000,${lat},${lng});node["railway"="station"](around:5000,${lat},${lng});node["railway"="stop"]["public_transport"="stop_position"](around:5000,${lat},${lng});node["public_transport"="station"](around:5000,${lat},${lng});node["railway"="subway_entrance"](around:3000,${lat},${lng});way["public_transport"="station"](around:5000,${lat},${lng});relation["public_transport"="station"](around:5000,${lat},${lng}););out center 30;`;
   const url=`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
   try{
     const r=await fetch(url);
     if(!r.ok)throw new Error('overpass');
     const data=await r.json();
-    const nodes=(data.elements||[]).filter(n=>n.lat&&n.lon);
-    if(!nodes.length){el.innerHTML=`<div class="nearby-empty">Nenhuma estação encontrada num raio de 5km.<br>Verifique sua localização.</div>`;return;}
-    const withDist=nodes.map(n=>({...n,dist:haversine(lat,lng,n.lat,n.lon)}));
-    withDist.sort((a,b)=>a.dist-b.dist);
-    const top=withDist.slice(0,4);
+    // normalize: way/relation use center.lat/center.lon
+    const elems=(data.elements||[]).map(n=>{
+      const elat=n.lat||(n.center&&n.center.lat);
+      const elon=n.lon||(n.center&&n.center.lon);
+      return elat&&elon?{...n,lat:elat,lon:elon}:null;
+    }).filter(Boolean);
+    if(!elems.length){el.innerHTML=`<div class="nearby-empty">Nenhuma estação encontrada num raio de 5km.<br>Verifique sua localização.</div>`;return;}
+    // deduplicate by name, keeping closest node per name
+    const byName={};
+    for(const n of elems){
+      const name=n.tags?.name||n.tags?.['name:pt']||'';
+      if(!name)continue;
+      const dist=haversine(lat,lng,n.lat,n.lon);
+      if(!byName[name]||dist<byName[name].dist)byName[name]={...n,dist};
+    }
+    // also include unnamed entries
+    const unnamed=elems.filter(n=>!(n.tags?.name||n.tags?.['name:pt'])).map(n=>({...n,dist:haversine(lat,lng,n.lat,n.lon)}));
+    const all=[...Object.values(byName),...unnamed];
+    all.sort((a,b)=>a.dist-b.dist);
+    const top=all.slice(0,5);
     el.innerHTML=`<div style="padding:4px 14px 4px">`+top.map(n=>{
-      const name=n.tags?.name||n.tags?.['name:pt']||'Estação';
-      const line=n.tags?.line||n.tags?.network||n.tags?.operator||'';
-      const url=`https://www.google.com/maps?q=${n.lat},${n.lon}`;
+      const name=n.tags?.name||n.tags?.['name:pt']||'Estação sem nome';
+      const line=n.tags?.line||n.tags?.['line:ref']||n.tags?.network||n.tags?.operator||'';
+      const color=n.tags?.colour||n.tags?.color||null;
+      const iconStyle=color?`background:${color}22;`:'background:var(--metro-bg)';
+      const iconColor=color||'var(--metro)';
+      const mapUrl=`https://www.google.com/maps?q=${n.lat},${n.lon}`;
       return`<div class="nearby-item">
-        <div class="nearby-item-icon" style="background:var(--metro-bg)"><i class="ti ti-train" style="color:var(--metro)"></i></div>
+        <div class="nearby-item-icon" style="${iconStyle}"><i class="ti ti-train" style="color:${iconColor}"></i></div>
         <div style="flex:1;min-width:0">
           <div class="nearby-item-name">${name}</div>
           <div class="nearby-item-meta">${line?`<span>${line}</span>`:''}<span class="nearby-dist-badge ${distBadgeClass(n.dist)}">${fmtDist(n.dist)}</span></div>
         </div>
-        <a class="nearby-maps-btn" href="${url}" target="_blank"><i class="ti ti-map" style="font-size:12px"></i> Abrir</a>
+        <a class="nearby-maps-btn" href="${mapUrl}" target="_blank"><i class="ti ti-map" style="font-size:12px"></i> Abrir</a>
       </div>`;
     }).join('')+`</div>`;
   }catch(e){
