@@ -440,6 +440,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .nearby-loc-bar .loc-coords{font-size:10px;color:var(--text3);margin-top:1px}
 .nearby-retry-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;margin:10px auto 0;transition:background .15s}
 .nearby-retry-btn:hover{background:var(--blue2)}
+/* ── LOCATION AUTOCOMPLETE ── */
+.loc-autocomplete{position:relative}
+.loc-ac-results{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1.5px solid var(--blue-border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);z-index:50;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.loc-ac-item{padding:9px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;color:var(--text)}
+.loc-ac-item:last-child{border-bottom:none}
+.loc-ac-item:hover,.loc-ac-item.focused{background:var(--blue-bg);color:var(--blue)}
+.loc-ac-item i{font-size:14px;color:var(--text3);flex-shrink:0}
+.loc-ac-item:hover i,.loc-ac-item.focused i{color:var(--blue2)}
+.loc-ac-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loc-ac-addr{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.loc-error-bar{display:flex;align-items:flex-start;gap:7px;background:var(--red-bg);border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:9px 11px;font-size:12px;color:var(--red);margin-top:6px;line-height:1.4}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 .auth-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit}
 .auth-tab.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -844,26 +856,104 @@ function buildLocSearch(fieldId,savedLat,savedLng,savedName){
     else if(savedLat==='name')mapsUrl=`https://www.google.com/maps/search/${encodeURIComponent(savedLng)}`;
     else mapsUrl=`https://www.google.com/maps?q=${savedLat},${savedLng}`;
   }
+  // Show green bar if saved WITH real coords, orange warning if saved without
+  const hasRealCoords=hasSaved&&savedLat!=='link'&&savedLat!=='name'&&!isNaN(parseFloat(savedLat));
   return`<div class="loc-link-wrap" id="lsw_${fieldId}">
-    ${!hasSaved?`<div style="position:relative">
-      <i class="ti ti-link" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none"></i>
-      <div class="loc-link-row">
-        <input type="text" id="lsi_${fieldId}" placeholder="Cole link do Maps ou nome do lugar...">
-        <button class="loc-save-btn" onclick="saveLocLink('${fieldId}')"><i class="ti ti-check" style="font-size:14px"></i> Salvar</button>
-      </div>
-    </div>`:`<div class="loc-saved-bar">
-      <i class="ti ti-map-pin"></i>
-      <span class="coords-txt">${savedName||'Localização salva'}</span>
-      <a class="loc-show-btn" href="${mapsUrl}" target="_blank"><i class="ti ti-map" style="font-size:13px"></i> Abrir</a>
-      <button class="loc-clear-btn" onclick="clearLocLink('${fieldId}')"><i class="ti ti-x"></i></button>
-    </div>`}
+    ${!hasSaved
+      ?`<div class="loc-autocomplete" id="lac_${fieldId}">
+          <div style="position:relative">
+            <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none"></i>
+            <div class="loc-link-row">
+              <input type="text" id="lsi_${fieldId}" placeholder="Buscar lugar ou colar link do Maps..."
+                oninput="acInput('${fieldId}')" onkeydown="acKey(event,'${fieldId}')" autocomplete="off">
+              <button class="loc-save-btn" id="lsb_${fieldId}" onclick="saveLocLink('${fieldId}')" disabled style="opacity:.5"><i class="ti ti-check" style="font-size:14px"></i> Salvar</button>
+            </div>
+          </div>
+          <div class="loc-ac-results" id="lac_results_${fieldId}" style="display:none"></div>
+          <div id="lac_err_${fieldId}"></div>
+        </div>`
+      :`<div class="loc-saved-bar" style="${!hasRealCoords?'background:var(--orange-bg);border-color:var(--orange-border);color:var(--orange)':''}">
+          <i class="ti ti-map-pin" style="${!hasRealCoords?'color:var(--orange)':''}"></i>
+          <span class="coords-txt" style="${!hasRealCoords?'color:var(--orange)':''}">${savedName||'Localização salva'}${!hasRealCoords?' ⚠️ sem coords':''}</span>
+          ${mapsUrl?`<a class="loc-show-btn" href="${mapsUrl}" target="_blank"><i class="ti ti-map" style="font-size:13px"></i> Abrir</a>`:''}
+          <button class="loc-clear-btn" onclick="clearLocLink('${fieldId}')"><i class="ti ti-x"></i></button>
+        </div>`
+    }
   </div>`;
 }
+
 const EDGE_RESOLVE_URL='https://xeerqiehnmxiifzguugt.supabase.co/functions/v1/quick-handler';
 
+// Per-field state for autocomplete selected item
+const _acSelected={};
+let _acTimer=null;
+
+async function acInput(fieldId){
+  const inp=document.getElementById('lsi_'+fieldId);
+  const btn=document.getElementById('lsb_'+fieldId);
+  const results=document.getElementById('lac_results_'+fieldId);
+  const errEl=document.getElementById('lac_err_'+fieldId);
+  if(!inp)return;
+  const val=inp.value.trim();
+  // Clear selected item and disable save when user types
+  delete _acSelected[fieldId];
+  if(btn)btn.disabled=true,btn.style.opacity='.5';
+  if(errEl)errEl.innerHTML='';
+
+  // If it looks like a URL, switch to link-resolve mode
+  if(val.startsWith('http')){
+    if(results)results.style.display='none';
+    if(btn)btn.disabled=false,btn.style.opacity='1';
+    return;
+  }
+
+  if(val.length<2){if(results)results.style.display='none';return;}
+
+  clearTimeout(_acTimer);
+  _acTimer=setTimeout(async()=>{
+    if(results){results.style.display='block';results.innerHTML=`<div class="loc-ac-item"><i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i><div class="loc-ac-name">Buscando...</div></div>`;}
+    try{
+      const cityCtx=cur!==null?getCityForDay(trips[cur],trips[cur].days[curDay]?.date)||'':'' ;
+      const q=cityCtx?`${val}, ${cityCtx}`:val;
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
+      const data=await r.json();
+      if(!data||!data.length){
+        if(results)results.innerHTML=`<div class="loc-ac-item" style="color:var(--text3)"><i class="ti ti-map-off"></i><div class="loc-ac-name">Nenhum resultado. Tente um link do Maps.</div></div>`;
+        return;
+      }
+      if(results){
+        results.innerHTML=data.map((item,i)=>{
+          const name=item.namedetails?.name||item.display_name.split(',')[0];
+          const addr=item.display_name.split(',').slice(1,3).join(',').trim();
+          return`<div class="loc-ac-item" data-idx="${i}" onclick="acSelect('${fieldId}',${item.lat},${item.lon},'${encodeURIComponent(name)}','${encodeURIComponent(item.display_name.split(',').slice(0,2).join(',').trim())}')">
+            <i class="ti ti-map-pin"></i>
+            <div style="min-width:0"><div class="loc-ac-name">${name}</div><div class="loc-ac-addr">${addr}</div></div>
+          </div>`;
+        }).join('');
+      }
+    }catch{
+      if(results)results.innerHTML=`<div class="loc-ac-item" style="color:var(--text3)"><i class="ti ti-alert-circle"></i><div class="loc-ac-name">Erro na busca. Tente um link do Maps.</div></div>`;
+    }
+  },400);
+}
+
+function acSelect(fieldId,lat,lng,encodedName,encodedAddr){
+  const inp=document.getElementById('lsi_'+fieldId);
+  const btn=document.getElementById('lsb_'+fieldId);
+  const results=document.getElementById('lac_results_'+fieldId);
+  const name=decodeURIComponent(encodedName);
+  const addr=decodeURIComponent(encodedAddr);
+  if(inp)inp.value=name;
+  if(results)results.style.display='none';
+  _acSelected[fieldId]={lat:String(lat),lng:String(lng),name,locName:addr};
+  if(btn)btn.disabled=false,btn.style.opacity='1';
+}
+
+function acKey(e,fieldId){
+  if(e.key==='Escape'){const r=document.getElementById('lac_results_'+fieldId);if(r)r.style.display='none';}
+}
+
 function applyLocLink(fieldId,lat,lng,locName,placeName){
-  // placeName = clean name to fill the title field (e.g. "Museu do Ipiranga")
-  // locName   = label shown in the saved bar (can be same or a short address)
   const pn=placeName||locName;
   const parts=fieldId.split('_');const type=parts[0];
   if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
@@ -872,66 +962,63 @@ function applyLocLink(fieldId,lat,lng,locName,placeName){
   else if(type==='role'){const di=parseInt(parts[1]),ri=parseInt(parts[2]);trips[cur].days[di].roles[ri].lat=lat;trips[cur].days[di].roles[ri].lng=lng;trips[cur].days[di].roles[ri].locName=locName||'Local salvo';if(pn&&pn!=='Localização salva'&&pn!=='Local salvo')trips[cur].days[di].roles[ri].name=pn;save();renderDay();}
 }
 
-
 async function saveLocLink(fieldId){
   const inp=document.getElementById('lsi_'+fieldId);
+  const btn=document.getElementById('lsb_'+fieldId);
+  const errEl=document.getElementById('lac_err_'+fieldId);
   if(!inp)return;
   const raw=inp.value.trim();
-  if(!raw){toast('Cole o link ou digite o nome do lugar');return;}
+  if(!raw){toast('Digite o nome do lugar ou cole um link');return;}
+  if(errEl)errEl.innerHTML='';
 
-  const btn=inp.parentElement?.querySelector('.loc-save-btn');
-  if(btn){btn.disabled=true;btn.innerHTML='<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></div>';}
-
-  let lat=null,lng=null,locName=null,placeName=null;
-
-  if(!raw.startsWith('http')){
-    // Plain text — use as name and search Nominatim for coords
-    placeName=raw;
-    const r=await nominatimSearch(raw);
-    if(r){lat=r.lat;lng=r.lng;locName=r.locName||raw;}
-    else{lat='name';lng=raw;locName=raw;}
-    applyLocLink(fieldId,lat,lng,locName,placeName);
+  // If user selected from autocomplete — coords already resolved
+  if(_acSelected[fieldId]){
+    const s=_acSelected[fieldId];
+    applyLocLink(fieldId,s.lat,s.lng,s.locName,s.name);
+    delete _acSelected[fieldId];
     toast('Localização salva! 📍');
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
     return;
   }
 
-  // URL — try to extract coords + name directly (desktop Maps links)
+  // Must be a URL at this point
+  if(!raw.startsWith('http')){
+    if(errEl)errEl.innerHTML=`<div class="loc-error-bar"><i class="ti ti-alert-circle" style="flex-shrink:0;margin-top:1px"></i><span>Selecione um lugar da lista de sugestões ou cole um link do Google Maps.</span></div>`;
+    return;
+  }
+
+  // Show spinner
+  if(btn){btn.disabled=true;btn.innerHTML='<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></div>';}
+  toast('Resolvendo link... ⏳',5000);
+
+  let lat=null,lng=null,locName=null,placeName=null;
+
+  // Try coords directly from URL first (desktop Maps links)
   const coordPatterns=[/@(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,/ll=(-?\d+\.\d+),(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/];
   for(const p of coordPatterns){const m=raw.match(p);if(m){lat=m[1];lng=m[2];break;}}
-
-  // Always try to extract place name from URL
   const pm=raw.match(/place\/([^/@?]+)/)||raw.match(/[?&]q=([^&@]+)/)||raw.match(/search\?q=([^&@]+)/);
   if(pm){const n=decodeURIComponent(pm[1].replace(/\+/g,' ')).replace(/,.*$/,'').trim();if(n&&n.length>2&&!/^-?\d/.test(n))placeName=n;}
 
-  if(lat){
-    locName=placeName||'Localização salva';
-  } else {
+  if(!lat){
     // Short link — call Edge Function
-    toast('Resolvendo link... ⏳',4000);
     try{
       const res=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:raw})});
       const data=await res.json();
-      if(data.lat&&data.lng){
-        lat=data.lat;lng=data.lng;
-        placeName=placeName||data.name||null;
-        locName=placeName||'Localização salva';
-      } else if(data.name){
-        placeName=placeName||data.name;
-        const nr=await nominatimSearch(data.name);
-        if(nr){lat=nr.lat;lng=nr.lng;locName=nr.locName||data.name;}
-        else{lat='name';lng=data.name;locName=data.name;}
-      } else {
-        lat='link';lng=raw;locName=placeName||'Localização salva';
-      }
-    }catch{
-      lat='link';lng=raw;locName=placeName||'Localização salva';
-    }
+      if(data.lat&&data.lng){lat=data.lat;lng=data.lng;placeName=placeName||data.name||null;}
+      else if(data.name){placeName=placeName||data.name;}
+    }catch{}
   }
 
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
+
+  // Strict check — only save if we have real coords
+  if(!lat||!lng){
+    if(errEl)errEl.innerHTML=`<div class="loc-error-bar"><i class="ti ti-alert-circle" style="flex-shrink:0;margin-top:1px"></i><span>Não conseguimos extrair as coordenadas deste link. Tente abrir o Maps no navegador (não no app) e copiar o link, ou use a busca pelo nome do lugar acima.</span></div>`;
+    return;
+  }
+
+  locName=placeName||'Localização salva';
   applyLocLink(fieldId,lat,lng,locName,placeName);
   toast('Localização salva! 📍');
-  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
 }
 function clearLocLink(fieldId){
   const parts=fieldId.split('_');const type=parts[0];
@@ -2427,39 +2514,17 @@ async function nominatimSearch(name,cityContext){
   return null;
 }
 
-async function resolveItemCoords(item,cityContext){
-  // Already has real numeric coords
-  const c=parseItemCoords(item);
-  if(c)return c;
-
-  // lat='link' — short URL saved, try Edge Function to resolve it
-  if(item.lat==='link'&&item.lng&&item.lng.startsWith('http')){
-    try{
-      const res=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:item.lng})});
-      const data=await res.json();
-      if(data.lat&&data.lng)return{lat:parseFloat(data.lat),lng:parseFloat(data.lng)};
-      // Got name from edge function — fall through to Nominatim with it
-      if(data.name){
-        const nr=await nominatimSearch(data.name,cityContext);
-        if(nr)return{lat:parseFloat(nr.lat),lng:parseFloat(nr.lng)};
-      }
-    }catch{}
-  }
-
-  // Try Nominatim with item name + city context
-  const query=item.name||(item.locName!=='Localização salva'&&item.locName!=='Local salvo'?item.locName:null)||null;
-  if(!query)return null;
-  const r=await nominatimSearch(query,cityContext);
-  if(r)return{lat:parseFloat(r.lat),lng:parseFloat(r.lng)};
-  return null;
+async function resolveItemCoords(item){
+  // All newly saved items have real coords — just parse them
+  return parseItemCoords(item);
 }
 
-async function renderNearbySection(containerId,items,userLat,userLng,cityContext){
+async function renderNearbySection(containerId,items,userLat,userLng){
   const el=document.getElementById(containerId);if(!el)return;
   if(!items||!items.length){el.innerHTML=`<div class="nearby-empty">Nenhum item com localização salva para hoje.<br>Adicione coordenadas nas atrações do roteiro.</div>`;return;}
   el.innerHTML=`<div class="nearby-loading"><div class="spin-sm"></div> Calculando distâncias...</div>`;
   const resolved=await Promise.all(items.map(async item=>{
-    const c=await resolveItemCoords(item,cityContext);
+    const c=await resolveItemCoords(item);
     const d=c?haversine(userLat,userLng,c.lat,c.lng):null;
     const url=mapsLink(item.lat,item.lng,item.name||item.locName);
     return{item,d,url};
@@ -2566,7 +2631,7 @@ function initNearby(){
     // Visits
     const visitEl=document.getElementById('nearbyVisitResult');
     if(td&&td.day.visits&&td.day.visits.length){
-      renderNearbySection('nearbyVisitResult',td.day.visits,lat,lng,cityContext);
+      renderNearbySection('nearbyVisitResult',td.day.visits,lat,lng);
     } else {
       visitEl.innerHTML=`<div class="nearby-empty">Sem atrações no roteiro de ${dateLabel}.</div>`;
     }
@@ -2574,7 +2639,7 @@ function initNearby(){
     // Foods
     const foodEl=document.getElementById('nearbyFoodResult');
     if(td&&td.day.foods&&td.day.foods.length){
-      renderNearbySection('nearbyFoodResult',td.day.foods,lat,lng,cityContext);
+      renderNearbySection('nearbyFoodResult',td.day.foods,lat,lng);
     } else {
       foodEl.innerHTML=`<div class="nearby-empty">Sem opções de alimentação no roteiro de ${dateLabel}.</div>`;
     }
@@ -2582,7 +2647,7 @@ function initNearby(){
     // Roles (rolezinhos)
     const roleEl=document.getElementById('nearbyRoleResult');
     if(td&&td.day.roles&&td.day.roles.length){
-      renderNearbySection('nearbyRoleResult',td.day.roles,lat,lng,cityContext);
+      renderNearbySection('nearbyRoleResult',td.day.roles,lat,lng);
     } else {
       roleEl.innerHTML=`<div class="nearby-empty">Sem rolezinhos no roteiro de ${dateLabel}.</div>`;
     }
