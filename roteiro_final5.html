@@ -1019,6 +1019,17 @@ function moveVisitToNextDay(di,vi){
   renderDay();
   toast(`"${visit.name||'Local'}" movido para o dia ${trip.days[di+1].num} ➡️`);
 }
+function moveVisitToPrevDay(di,vi){
+  const trip=trips[cur];
+  if(di<=0){toast('Não há dia anterior! 📅');return;}
+  const visit=trip.days[di].visits.splice(vi,1)[0];
+  if(!trip.days[di-1].visits)trip.days[di-1].visits=[];
+  trip.days[di-1].visits.push(visit);
+  save();
+  expandedVisits=new Set();
+  renderDay();
+  toast(`"${visit.name||'Local'}" movido para o dia ${trip.days[di-1].num} ⬅️`);
+}
 
 function renderDay(){
   const trip=trips[cur];const day=trip.days[curDay];const di=curDay;
@@ -1074,44 +1085,61 @@ function renderDay(){
     const opt=TR_OPTS.find(o=>o.k===openTrKey)||{icon:'ti-route',label:'Transporte'};
     openTrDetail=`<div class="transport-detail"><h4><i class="ti ${opt.icon}"></i>${opt.label}</h4>
     <div class="td-row"><div class="td-field"><label>Descrição</label><input id="trDesc_${di}_${openTrKey}" value="${tr.desc||''}" placeholder="Ex: Linha 2, Uber..."></div><div class="td-field"><label>Valor</label><input id="trVal_${di}_${openTrKey}" value="${tr.value||''}" placeholder="R$ 30"></div></div>
-    <div class="td-field" style="margin-top:8px"><label>Comentário</label><textarea id="trCmt_${di}_${openTrKey}" placeholder="Observações sobre este transporte..." style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:60px;line-height:1.4;transition:border-color .15s" onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='var(--border2)'">${tr.comment||''}</textarea></div>
+    <div class="td-field" style="margin-top:8px"><label>Comentário</label><textarea id="trCmt_${di}_${openTrKey}" placeholder="Observações sobre este transporte..." style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:60px;line-height:1.4;transition:border-color .15s;overflow:hidden" onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='var(--border2)'" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">${tr.comment||''}</textarea></div>
     <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="rm-btn" onclick="removeLocalTrByKey(${di},'${openTrKey}')"><i class="ti ti-trash"></i> Remover</button></div>
     ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketLocalByKey(${di},'${openTrKey}')"><i class="ti ti-x"></i></button></div>`:''}
     <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketLocalByKey(${di},'${openTrKey}',this)"></label>
     <button class="btn-p" style="width:100%;margin-top:10px;padding:10px;font-size:13px;justify-content:center" onclick="saveTrLocal(${di},'${openTrKey}')"><i class="ti ti-device-floppy"></i> Salvar</button></div>`;
+  // Auto-resize existing comment text on render
+  setTimeout(()=>{const ta=document.getElementById('trCmt_'+di+'_'+openTrKey);if(ta&&ta.value){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}},0);
   }
 
-  const visitsHtml=(day.visits||[]).map((v,vi)=>{
-    const isExp=expandedVisits.has(vi);const hasGeo=v.lat&&v.lng;const fid=`visit_${di}_${vi}`;
+  const sortedVisits=[...(day.visits||[])].sort((a,b)=>{
+    const aHasTime=a.time&&a.time.trim();const bHasTime=b.time&&b.time.trim();
+    if(aHasTime&&bHasTime)return a.time.localeCompare(b.time);
+    if(aHasTime)return-1;if(bHasTime)return 1;
+    return(a.name||'').localeCompare(b.name||'','pt');
+  });
+  const visitsHtml=sortedVisits.map((v)=>{
+    const realVi=(day.visits||[]).indexOf(v);
+    const isExp=expandedVisits.has(realVi);const hasGeo=v.lat&&v.lng;const fid=`visit_${di}_${realVi}`;
+    const trip=trips[cur];
+    const curCity=getCityForDay(trip,day.date)||'';
+    const canPrev=di>0&&(getCityForDay(trip,trip.days[di-1].date)||'')=== curCity;
+    const canNext=di<trip.days.length-1;
+    const dayMoveButtons=(canPrev||canNext)?`<div style="display:flex;gap:6px;margin-top:6px">
+      ${canPrev?`<button onclick="moveVisitToPrevDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--blue-border);color:var(--blue2);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-left" style="font-size:14px"></i> Dia ${trip.days[di-1].num}</button>`:''}
+      ${canNext?`<button onclick="moveVisitToNextDay(${di},${realVi})" style="flex:1;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Dia ${trip.days[di+1].num}</button>`:''}
+    </div>`:'';
     if(isExp){return`<div class="visit-expanded">
-      <div class="visit-expanded-hdr" onclick="toggleExpandVisit(${vi})">
-        <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${vi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
+      <div class="visit-expanded-hdr" onclick="toggleExpandVisit(${realVi})">
+        <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${realVi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
         <div class="v-name-big">${v.name||'Novo local'}</div>
         <i class="ti ti-chevron-up" style="font-size:15px;color:var(--blue2)"></i>
-        <button class="rm-btn" onclick="event.stopPropagation();rmVisit(${di},${vi})" title="Excluir local" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+        <button class="rm-btn" onclick="event.stopPropagation();rmVisit(${di},${realVi})" title="Excluir local" style="color:var(--red)"><i class="ti ti-trash"></i></button>
       </div>
       <div class="visit-expanded-body">
-        <input class="visit-name-edit" id="vname_${di}_${vi}" value="${v.name||''}" placeholder="Nome do local" oninput="updVisit(${di},${vi},'name',this.value)">
+        <input class="visit-name-edit" id="vname_${di}_${realVi}" value="${v.name||''}" placeholder="Nome do local" oninput="updVisit(${di},${realVi},'name',this.value)">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <i class="ti ti-clock" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>
-          <input type="time" id="vtime_${di}_${vi}" value="${v.time||''}" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;flex:1" oninput="updVisit(${di},${vi},'time',this.value)">
+          <input type="time" id="vtime_${di}_${realVi}" value="${v.time||''}" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;flex:1" oninput="updVisit(${di},${realVi},'time',this.value)">
           <span style="font-size:11px;color:var(--text3)">Horário</span>
         </div>
         <div class="visit-addr-row">
-          <div class="vaf"><i class="ti ti-train ico"></i><input value="${v.metro||''}" placeholder="Metrô próximo" oninput="updVisit(${di},${vi},'metro',this.value)"></div>
+          <div class="vaf"><i class="ti ti-train ico"></i><input value="${v.metro||''}" placeholder="Metrô próximo" oninput="updVisit(${di},${realVi},'metro',this.value)"></div>
         </div>
         <div class="field-label">LOCALIZAÇÃO</div>
-        ${buildLocSearch('visit_'+di+'_'+vi,v.lat,v.lng,v.locName||v.name)}
+        ${buildLocSearch('visit_'+di+'_'+realVi,v.lat,v.lng,v.locName||v.name)}
         <div class="field-label">INGRESSO</div>
-        ${v.ticketName?`<div class="attach-file" onclick="viewVisitTicket(${di},${vi})"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${vi})"><i class="ti ti-x"></i></button></div>`:''}
-        <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${vi},this)"></label>
-        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${vi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
-        ${di<trips[cur].days.length-1?`<button onclick="moveVisitToNextDay(${di},${vi})" style="width:100%;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Passar pro dia ${trips[cur].days[di+1].num}</button>`:''}
-        <button class="comment-toggle-btn ${v.comment?'has-comment':''}" onclick="toggleComment(${di},${vi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${v.comment?'Ver comentário':'Adicionar comentário'}</button>
-        ${expandedComments.has(vi)?`<div class="comment-panel"><textarea id="cmt_${di}_${vi}" placeholder="Escreva um comentário sobre este lugar...">${v.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveComment(${di},${vi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
+        ${v.ticketName?`<div class="attach-file" onclick="viewVisitTicket(${di},${realVi})"><i class="ti ti-file file-ico"></i><span class="fname">${v.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmVisitTicket(${di},${realVi})"><i class="ti ti-x"></i></button></div>`:''}
+        <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar ingresso<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachVisitTicket(${di},${realVi},this)"></label>
+        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveVisit(${di},${realVi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
+        ${dayMoveButtons}
+        <button class="comment-toggle-btn ${v.comment?'has-comment':''}" onclick="toggleComment(${di},${realVi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${v.comment?'Ver comentário':'Adicionar comentário'}</button>
+        ${expandedComments.has(realVi)?`<div class="comment-panel"><textarea id="cmt_${di}_${realVi}" placeholder="Escreva um comentário sobre este lugar...">${v.comment||''}</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveComment(${di},${realVi})"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>`:''}
       </div></div>`;}
-    else{return`<div class="visit-collapsed ${v.done?'done-item':''}" onclick="toggleExpandVisit(${vi})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
-      <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${vi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
+    else{return`<div class="visit-collapsed ${v.done?'done-item':''}" onclick="toggleExpandVisit(${realVi})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
+      <div class="v-check ${v.done?'on':''}" onclick="event.stopPropagation();toggleVisit(${di},${realVi})" style="width:18px;height:18px;border:1.5px solid ${v.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${v.done?'var(--success)':'var(--surface)'}">${v.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
       <div style="flex:1;min-width:0">
         <div class="v-name-label" style="display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           <span>${v.name||'Novo local'}</span>
@@ -1122,7 +1150,6 @@ function renderDay(){
         ${hasGeo?'<span class="v-geo-dot"></span>':''}
         ${v.ticketName?'<span class="v-ticket-dot"></span>':''}
         ${v.comment?'<span class="v-comment-dot"></span>':''}
-        ${di<trips[cur].days.length-1?`<button onclick="event.stopPropagation();moveVisitToNextDay(${di},${vi})" title="Passar pro dia seguinte" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:7px;padding:4px 7px;cursor:pointer;display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--text2);font-family:inherit;white-space:nowrap;transition:all .15s" onmouseover="this.style.borderColor='var(--orange-border)';this.style.color='var(--orange)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'"><i class="ti ti-arrow-right" style="font-size:12px"></i></button>`:''}
         <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3)"></i>
       </div>
     </div>`;}
