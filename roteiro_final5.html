@@ -395,6 +395,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .food-hotel-start{display:flex;align-items:center;gap:7px;margin-bottom:8px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;color:var(--blue);font-weight:500;cursor:pointer;transition:all .15s;user-select:none}
 .food-hotel-start input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 
+/* ── ROLEZINHOS ── */
+.role-cat-btn{border:1.5px solid var(--border2);border-radius:20px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.role-cat-btn:hover{border-color:#8B5CF6;color:#7C3AED}
+.role-cat-btn.active-all{background:var(--surface2);border-color:#7C3AED;color:#7C3AED}
+.role-cat-btn.active-bar{background:#FFF7ED;border-color:#EA580C;color:#EA580C}
+.role-cat-btn.active-balada{background:#F5F3FF;border-color:#7C3AED;color:#7C3AED}
+.role-cat-btn.active-gay{background:#FFF0F9;border-color:#DB2777;color:#DB2777}
+.role-pill-bar{background:#FFF7ED;color:#EA580C;border:1px solid #FDBA74}
+.role-pill-balada{background:#F5F3FF;color:#7C3AED;border:1px solid #C4B5FD}
+.role-pill-gay{background:#FFF0F9;color:#DB2777;border:1px solid #FBCFE8}
+.role-route-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-top:8px}
+.role-route-box .rrt-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 .auth-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit}
 .auth-tab.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -872,7 +885,7 @@ function openNewTripModal(){
   renderDRP();
   document.getElementById('newTripModal').classList.add('open');
 }
-function makeDay(num,date){return{num,date,title:'',hotelLat:'',hotelLng:'',hotelLocName:'',hotelReserva:'',hotelAttachName:'',hotelAttachData:'',transports:[],visits:[],notes:'',transfers:[]};}
+function makeDay(num,date){return{num,date,title:'',hotelLat:'',hotelLng:'',hotelLocName:'',hotelReserva:'',hotelAttachName:'',hotelAttachData:'',transports:[],visits:[],notes:'',transfers:[],foods:[],roles:[]};}
 function createTrip(){
   const name=document.getElementById('tripName').value.trim();
   const status=document.getElementById('tripStatus').value;
@@ -1076,18 +1089,25 @@ function renderDay(){
   }
 
   const trActive=day.transports||[];
-  const transportBtnsHtml=TR_OPTS.map(o=>{const existing=trActive.find(t=>t.mode===o.k);const hasObs=existing&&(existing.desc||existing.value||existing.ticketName||existing.comment);return`<button class="tr-btn ${o.isMet?'metro-btn':''} ${hasObs?'has-obs':''}" onclick="toggleLocalTr(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`;}).join('');
+  const transportBtnsHtml=TR_OPTS.map(o=>{const existing=trActive.find(t=>t.mode===o.k);const hasObs=existing&&(existing.desc||existing.value||existing.ticketName||existing.comment||existing.metroMapName);return`<button class="tr-btn ${o.isMet?'metro-btn':''} ${hasObs?'has-obs':''}" onclick="toggleLocalTr(${di},'${o.k}')"><i class="ti ${o.icon}"></i>${o.label}</button>`;}).join('');
   const openTrKey=day._openTrKey||null;
   let openTrDetail='';
   if(openTrKey){
     const tr=trActive.find(t=>t.mode===openTrKey)||{mode:openTrKey,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:''};
     const opt=TR_OPTS.find(o=>o.k===openTrKey)||{icon:'ti-route',label:'Transporte'};
+    const isMetro=openTrKey==='metro';
+    const metroMapHtml=isMetro?`<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--metro);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="ti ti-map" style="font-size:13px"></i> MAPA DO METRÔ</div>
+      ${tr.metroMapName?`<div class="attach-file" onclick="viewAttach('${tr.metroMapData||''}','${tr.metroMapName}')" style="border-color:var(--metro-border);background:var(--metro-bg)"><i class="ti ti-map file-ico" style="color:var(--metro)"></i><span class="fname" style="color:var(--metro)">${tr.metroMapName}</span><button class="rm" onclick="event.stopPropagation();rmMetroMap(${di})"><i class="ti ti-x"></i></button></div>`:''}
+      <label class="attach-btn-label" style="cursor:pointer;border-color:var(--metro-border);color:var(--metro);background:var(--metro-bg)"><i class="ti ti-map-2"></i>${tr.metroMapName?'Trocar mapa':'Anexar mapa do metrô'}<input type="file" accept="image/*" style="display:none" onchange="attachMetroMap(${di},this)"></label>
+    </div>`:'';
     openTrDetail=`<div class="transport-detail"><h4><i class="ti ${opt.icon}"></i>${opt.label}</h4>
     <div class="td-row"><div class="td-field"><label>Descrição</label><input id="trDesc_${di}_${openTrKey}" value="${tr.desc||''}" placeholder="Ex: Linha 2, Uber..."></div><div class="td-field"><label>Valor</label><input id="trVal_${di}_${openTrKey}" value="${tr.value||''}" placeholder="R$ 30"></div></div>
     <div class="td-field" style="margin-top:8px"><label>Comentário</label><textarea id="trCmt_${di}_${openTrKey}" placeholder="Observações sobre este transporte..." style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:60px;line-height:1.4;transition:border-color .15s;overflow:hidden" onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='var(--border2)'" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">${tr.comment||''}</textarea></div>
     <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="rm-btn" onclick="removeLocalTrByKey(${di},'${openTrKey}')"><i class="ti ti-trash"></i> Remover</button></div>
     ${tr.ticketName?`<div class="attach-file" onclick="viewAttach('${tr.ticketData}','${tr.ticketName}')"><i class="ti ti-file file-ico"></i><span class="fname">${tr.ticketName}</span><button class="rm" onclick="event.stopPropagation();rmTicketLocalByKey(${di},'${openTrKey}')"><i class="ti ti-x"></i></button></div>`:''}
     <label class="attach-btn-label" style="cursor:pointer"><i class="ti ti-upload"></i>Anexar passagem<input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTicketLocalByKey(${di},'${openTrKey}',this)"></label>
+    ${metroMapHtml}
     <button class="btn-p" style="width:100%;margin-top:10px;padding:10px;font-size:13px;justify-content:center" onclick="saveTrLocal(${di},'${openTrKey}')"><i class="ti ti-device-floppy"></i> Salvar</button></div>`;
   // Auto-resize existing comment text on render
   setTimeout(()=>{const ta=document.getElementById('trCmt_'+di+'_'+openTrKey);if(ta&&ta.value){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}},0);
@@ -1175,6 +1195,8 @@ function renderDay(){
     <div class="day-card-body">${visitsHtml}<button class="add-v-btn" onclick="addVisit(${di})"><i class="ti ti-plus"></i> Adicionar local</button>${buildSmartRouteBtn(di)}</div></div>
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-tools-kitchen-2"></i> Onde comer</h3></div>
     <div class="day-card-body">${buildFoodSection(di)}</div></div>
+    <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-confetti"></i> Rolezinhos</h3></div>
+    <div class="day-card-body">${buildRoleSection(di)}</div></div>
     <div class="day-card"><div class="day-card-hdr"><h3><i class="ti ti-notes"></i> Observações</h3>
       ${day._notesLocked?`<button class="cfg-btn" style="font-size:11px;padding:4px 10px" onclick="unlockNotes(${di})"><i class="ti ti-edit" style="font-size:13px"></i> Editar</button>`:`<button class="cfg-btn" style="font-size:11px;padding:4px 10px;background:var(--orange);color:#fff;border-color:var(--orange)" onclick="saveNotesDayLock(${di})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar</button>`}
     </div>
@@ -1435,12 +1457,12 @@ function saveTrLocal(di,key){
     title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',
     hotel_loc_name:day.hotelLocName||'',hotel_reserva:day.hotelReserva||'',
     hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:day.hotelAttachData||'',
-    notes:day.notes||'',open_tr_key:day._openTrKey||'',foods:day.foods||[]
+    notes:day.notes||'',open_tr_key:day._openTrKey||'',foods:day.foods||[],roles:day.roles||[]
   }).eq('id',day.id).then(({error})=>{if(error)toast('Erro ao salvar: '+error.message);});
   toast('Transporte salvo!');
   renderDay();
 }
-function toggleLocalTr(di,key){const day=trips[cur].days[di];day._openTrKey=day._openTrKey===key?null:key;if(day._openTrKey&&!day.transports.find(t=>t.mode===key))day.transports.push({mode:key,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:''});save();renderDay();}
+function toggleLocalTr(di,key){const day=trips[cur].days[di];day._openTrKey=day._openTrKey===key?null:key;if(day._openTrKey&&!day.transports.find(t=>t.mode===key))day.transports.push({mode:key,desc:'',value:'',comment:'',paid:false,ticketName:'',ticketData:'',metroMapName:'',metroMapData:''});save();renderDay();}
 function togglePaidLocalByKey(di,key){const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].paid=!trips[cur].days[di].transports[idx].paid;save();renderDay();}}
 function removeLocalTrByKey(di,key){const day=trips[cur].days[di];day.transports=day.transports.filter(t=>t.mode!==key);day._openTrKey=null;save();renderDay();}
 function attachTicketLocalByKey(di,key,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const idx=trips[cur].days[di].transports.findIndex(t=>t.mode===key);if(idx>=0){trips[cur].days[di].transports[idx].ticketName=f.name;trips[cur].days[di].transports[idx].ticketData=e.target.result;save();renderDay();}};r.readAsDataURL(f);}
@@ -1468,6 +1490,31 @@ function updTr(di,ti,f,v){trips[cur].days[di].transfers[ti][f]=v;save();}
 function togglePaidTr(di,ti){const t=trips[cur].days[di].transfers[ti];t.paid=!t.paid;save();renderDay();}
 function attachTicketTr(di,ti,inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{trips[cur].days[di].transfers[ti].ticketName=f.name;trips[cur].days[di].transfers[ti].ticketData=e.target.result;save();renderDay();};r.readAsDataURL(f);}
 function rmTicketTr(di,ti){trips[cur].days[di].transfers[ti].ticketName='';trips[cur].days[di].transfers[ti].ticketData='';save();renderDay();}
+
+function attachMetroMap(di,inp){
+  const f=inp.files[0];if(!f)return;
+  if(f.size>5*1024*1024){toast('Imagem muito grande. Use menos de 5MB');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1200;let w=img.width,h=img.height;
+      if(w>max){h=h*(max/w);w=max;}if(h>max){w=w*(max/h);h=max;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const data=canvas.toDataURL('image/jpeg',0.85);
+      const tr=trips[cur].days[di].transports.find(t=>t.mode==='metro');
+      if(tr){tr.metroMapName=f.name;tr.metroMapData=data;}
+      save();renderDay();toast('Mapa do metrô anexado! 🚇');
+    };img.src=e.target.result;
+  };r.readAsDataURL(f);
+}
+function rmMetroMap(di){
+  const tr=trips[cur].days[di].transports.find(t=>t.mode==='metro');
+  if(tr){tr.metroMapName='';tr.metroMapData='';}
+  save();renderDay();
+}
 
 /* ═══════════════════════════════════════════
    DAY UTILS
@@ -1555,6 +1602,14 @@ function buildFoodSection(di){
     const expCmtF=expandedFoodComments.has(fi);
     const catMeta={meal:{label:'Refeição',cls:'food-pill-meal',icon:'ti-tools-kitchen-2'},dessert:{label:'Sobremesa',cls:'food-pill-dessert',icon:'ti-ice-cream'},drink:{label:'Beber',cls:'food-pill-drink',icon:'ti-glass-full'}};
     const cm=catMeta[f.cat||'meal'];
+    const tripRef=trips[cur];
+    const curCityFood=getCityForDay(tripRef,tripRef.days[di].date)||'';
+    const canFoodPrev=di>0&&(getCityForDay(tripRef,tripRef.days[di-1].date)||'')=== curCityFood;
+    const canFoodNext=di<tripRef.days.length-1&&(getCityForDay(tripRef,tripRef.days[di+1].date)||'')=== curCityFood;
+    const foodMoveButtons=(canFoodPrev||canFoodNext)?`<div style="display:flex;gap:6px;margin-top:6px">
+      ${canFoodPrev?`<button onclick="moveFoodToPrevDay(${di},${fi})" style="flex:1;background:transparent;border:1.5px solid var(--blue-border);color:var(--blue2);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-left" style="font-size:14px"></i> Voltar</button>`:''}
+      ${canFoodNext?`<button onclick="moveFoodToNextDay(${di},${fi})" style="flex:1;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Próximo</button>`:''}
+    </div>`:'';
     if(isExp){return`<div class="visit-expanded">
       <div class="visit-expanded-hdr" onclick="toggleExpandFood(${di},${fi})">
         <div class="v-check ${f.done?'on':''}" onclick="event.stopPropagation();toggleFood(${di},${fi})" style="width:18px;height:18px;border:1.5px solid ${f.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${f.done?'var(--success)':'var(--surface)'}">${f.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
@@ -1576,6 +1631,7 @@ function buildFoodSection(di){
         <div class="field-label">LOCALIZAÇÃO</div>
         ${buildLocSearch('food_'+di+'_'+fi,f.lat,f.lng,f.locName||f.name)}
         <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveFood(${di},${fi})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
+        ${foodMoveButtons}
         <button class="comment-toggle-btn ${f.comment?'has-comment':''}" onclick="toggleFoodComment(${di},${fi})"><i class="ti ti-message-circle" style="font-size:13px"></i>${f.comment?'Ver comentário':'Adicionar comentário'}</button>
         ${expandedFoodComments.has(fi)?'<div class="comment-panel"><textarea id="fcmt_'+di+'_'+fi+'" placeholder="Escreva um comentário sobre este lugar...">'+(f.comment||'')+'</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveFoodComment('+di+','+fi+')"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>':''}
       </div></div>`;}
@@ -1650,6 +1706,178 @@ function saveFoodComment(di,fi){
   if(!ta.value.trim())expandedFoodComments.delete(fi);
   renderDay();
   toast('Comentário salvo!');
+}
+function moveFoodToNextDay(di,fi){
+  const trip=trips[cur];
+  if(di>=trip.days.length-1){toast('Não há dia seguinte! 📅');return;}
+  const food=trip.days[di].foods.splice(fi,1)[0];
+  if(!trip.days[di+1].foods)trip.days[di+1].foods=[];
+  trip.days[di+1].foods.push(food);
+  save();
+  expandedFoods.delete(di+'_'+fi);
+  renderDay();
+  toast(`"${food.name||'Lugar'}" movido para o dia ${trip.days[di+1].num} ➡️`);
+}
+function moveFoodToPrevDay(di,fi){
+  const trip=trips[cur];
+  if(di<=0){toast('Não há dia anterior! 📅');return;}
+  const food=trip.days[di].foods.splice(fi,1)[0];
+  if(!trip.days[di-1].foods)trip.days[di-1].foods=[];
+  trip.days[di-1].foods.push(food);
+  save();
+  expandedFoods.delete(di+'_'+fi);
+  renderDay();
+  toast(`"${food.name||'Lugar'}" movido para o dia ${trip.days[di-1].num} ⬅️`);
+}
+
+/* ═══════════════════════════════════════════
+   ROLEZINHOS
+═══════════════════════════════════════════ */
+const roleCatFilter={};
+const expandedRoles=new Set();
+const expandedRoleComments=new Set();
+
+function getRoleFilter(di){return roleCatFilter[di]||'all';}
+function setRoleFilter(di,cat){roleCatFilter[di]=cat;renderDay();}
+
+function buildRoleSection(di){
+  const day=trips[cur].days[di];
+  const roles=day.roles||[];
+  const filter=getRoleFilter(di);
+  const cats=[
+    {k:'all',label:'Todos',icon:'ti-list'},
+    {k:'bar',label:'Bar',icon:'ti-beer'},
+    {k:'balada',label:'Balada',icon:'ti-music'},
+    {k:'gay',label:'Gay',icon:'ti-rainbow'},
+  ];
+  const filterHtml=`<div style="display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-bottom:10px">${cats.map(c=>`<button class="role-cat-btn ${filter===c.k?'active-'+c.k:''}" style="flex-shrink:0;display:inline-flex" onclick="setRoleFilter(${di},'${c.k}')"><i class="ti ${c.icon}" style="font-size:13px"></i>${c.label}</button>`).join('')}</div>`;
+  const visible=filter==='all'?roles:roles.filter(r=>r.cat===filter);
+  const catMeta={bar:{label:'Bar',cls:'role-pill-bar',icon:'ti-beer'},balada:{label:'Balada',cls:'role-pill-balada',icon:'ti-music'},gay:{label:'Gay',cls:'role-pill-gay',icon:'ti-rainbow'}};
+  const tripRef=trips[cur];
+  const curCityRole=getCityForDay(tripRef,tripRef.days[di].date)||'';
+  const canRolePrev=di>0&&(getCityForDay(tripRef,tripRef.days[di-1].date)||'')=== curCityRole;
+  const canRoleNext=di<tripRef.days.length-1&&(getCityForDay(tripRef,tripRef.days[di+1].date)||'')=== curCityRole;
+  const rolesHtml=visible.map((r,_)=>{
+    const ri=roles.indexOf(r);
+    const isExp=expandedRoles.has(di+'_'+ri);
+    const cm=catMeta[r.cat||'bar'];
+    const roleMoveButtons=(canRolePrev||canRoleNext)?`<div style="display:flex;gap:6px;margin-top:6px">
+      ${canRolePrev?`<button onclick="moveRoleToPrevDay(${di},${ri})" style="flex:1;background:transparent;border:1.5px solid var(--blue-border);color:var(--blue2);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-left" style="font-size:14px"></i> Voltar</button>`:''}
+      ${canRoleNext?`<button onclick="moveRoleToNextDay(${di},${ri})" style="flex:1;background:transparent;border:1.5px solid var(--orange-border);color:var(--orange);border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s"><i class="ti ti-arrow-right" style="font-size:14px"></i> Próximo</button>`:''}
+    </div>`:'';
+    if(isExp){return`<div class="visit-expanded">
+      <div class="visit-expanded-hdr" onclick="toggleExpandRole(${di},${ri})">
+        <div class="v-check ${r.done?'on':''}" onclick="event.stopPropagation();toggleRole(${di},${ri})" style="width:18px;height:18px;border:1.5px solid ${r.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${r.done?'var(--success)':'var(--surface)'}">${r.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
+        <div class="v-name-big">${r.name||'Novo rolê'}</div>
+        <i class="ti ti-chevron-up" style="font-size:15px;color:#7C3AED"></i>
+        <button class="rm-btn" onclick="event.stopPropagation();rmRole(${di},${ri})" title="Excluir rolê" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+      </div>
+      <div class="visit-expanded-body">
+        <input class="visit-name-edit" id="rname_${di}_${ri}" value="${r.name||''}" placeholder="Nome do lugar" oninput="updRole(${di},${ri},'name',this.value)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <i class="ti ti-clock" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>
+          <input type="time" value="${r.time||''}" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;flex:1" oninput="updRole(${di},${ri},'time',this.value)">
+          <select onchange="updRole(${di},${ri},'cat',this.value)" style="border:1.5px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
+            <option value="bar" ${(r.cat||'bar')==='bar'?'selected':''}>🍺 Bar</option>
+            <option value="balada" ${r.cat==='balada'?'selected':''}>🎵 Balada</option>
+            <option value="gay" ${r.cat==='gay'?'selected':''}>🌈 Gay</option>
+          </select>
+        </div>
+        <div class="field-label">LOCALIZAÇÃO</div>
+        ${buildLocSearch('role_'+di+'_'+ri,r.lat,r.lng,r.locName||r.name)}
+        <button class="btn-p" style="width:100%;justify-content:center;margin-top:10px;padding:10px;font-size:13px" onclick="saveRole(${di},${ri})"><i class="ti ti-device-floppy" style="font-size:13px"></i> Salvar local</button>
+        ${roleMoveButtons}
+        <button class="comment-toggle-btn ${r.comment?'has-comment':''}" onclick="toggleRoleComment(${di},${ri})"><i class="ti ti-message-circle" style="font-size:13px"></i>${r.comment?'Ver comentário':'Adicionar comentário'}</button>
+        ${expandedRoleComments.has(ri)?'<div class="comment-panel"><textarea id="rcmt_'+di+'_'+ri+'" placeholder="Escreva um comentário sobre este lugar...">'+(r.comment||'')+'</textarea><div class="comment-panel-footer"><button class="comment-save-btn" onclick="saveRoleComment('+di+','+ri+')"><i class="ti ti-check" style="font-size:12px"></i> Salvar</button></div></div>':''}
+      </div></div>`;}
+    else{return`<div class="visit-collapsed ${r.done?'done-item':''}" onclick="toggleExpandRole(${di},${ri})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer">
+      <div class="v-check ${r.done?'on':''}" onclick="event.stopPropagation();toggleRole(${di},${ri})" style="width:18px;height:18px;border:1.5px solid ${r.done?'var(--success)':'var(--border2)'};border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${r.done?'var(--success)':'var(--surface)'}">${r.done?'<i class="ti ti-check" style="color:#fff;font-size:12px"></i>':''}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <span style="font-size:13px;font-weight:500;${r.done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)'}">${r.name||'Novo rolê'}</span>
+          ${r.time?`<span style="font-size:11px;color:var(--text3);display:inline-flex;align-items:center;gap:2px;flex-shrink:0"><i class="ti ti-clock" style="font-size:11px"></i>${r.time}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <span class="food-item-pill ${cm.cls}"><i class="ti ${cm.icon}" style="font-size:10px"></i>${cm.label}</span>
+        ${r.lat&&r.lng?'<span class="v-geo-dot"></span>':''}
+        ${r.comment?'<span class="v-comment-dot"></span>':''}
+        <i class="ti ti-chevron-down" style="font-size:15px;color:var(--text3)"></i>
+      </div>
+    </div>`;}
+  }).join('');
+  const addBtn=`<button class="add-v-btn" onclick="addRole(${di})"><i class="ti ti-plus"></i> Adicionar rolê</button>`;
+  return filterHtml+rolesHtml+addBtn+buildRoleRouteBtn(di);
+}
+
+function buildRoleRouteBtn(di){
+  const day=trips[cur].days[di];
+  const roles=(day.roles||[]).filter(r=>!r.done&&r.lat&&r.lng);
+  if(!roles.length)return'<div style="font-size:11px;color:var(--text3);text-align:center;padding:6px 0;margin-top:4px">Adicione localização nos lugares para gerar rota</div>';
+  const hasHotel=day.hotelLat&&day.hotelLng;
+  const useHotel=day._roleRouteFromHotel&&hasHotel;
+  const hotelCheckHtml=hasHotel?`<label class="food-hotel-start"><input type="checkbox" ${useHotel?'checked':''} onchange="toggleRoleHotelStart(${di},this.checked)"><i class="ti ti-bed" style="font-size:13px;flex-shrink:0"></i> Partir da hospedagem</label>`:'';
+  const ordered=sortByProximity(roles.slice());
+  const wp=ordered.map(r=>{
+    if(r.lat==='name')return encodeURIComponent(r.lng);
+    if(r.lat==='link')return null;
+    return r.lat+','+r.lng;
+  }).filter(Boolean);
+  if(!wp.length)return'';
+  let urlParts=[...wp];
+  if(useHotel){
+    let hp='';
+    if(day.hotelLat==='link')hp='';
+    else if(day.hotelLat==='name')hp=encodeURIComponent(day.hotelLng);
+    else hp=day.hotelLat+','+day.hotelLng;
+    if(hp)urlParts=[hp,...urlParts];
+  }
+  const url=urlParts.length===1?'https://www.google.com/maps/search/'+urlParts[0]:'https://www.google.com/maps/dir/'+urlParts.join('/');
+  return`<div class="role-route-box">
+    <div class="rrt-label">ROTA INTELIGENTE</div>
+    ${hotelCheckHtml}
+    <a href="${url}" target="_blank" class="smart-route-btn" style="margin-top:0"><i class="ti ti-route"></i> Rota no Maps (${wp.length} lugar${wp.length>1?'es':''})</a>
+  </div>`;
+}
+
+function toggleRoleHotelStart(di,val){trips[cur].days[di]._roleRouteFromHotel=val;save();renderDay();}
+function addRole(di){if(!trips[cur].days[di].roles)trips[cur].days[di].roles=[];const ni=trips[cur].days[di].roles.length;trips[cur].days[di].roles.push({name:'',cat:'bar',time:'',lat:'',lng:'',locName:'',done:false});expandedRoles.add(di+'_'+ni);save();renderDay();}
+function rmRole(di,ri){if(!confirm('Excluir "'+( trips[cur].days[di].roles[ri].name||'este rolê')+'"?'))return;trips[cur].days[di].roles.splice(ri,1);expandedRoles.delete(di+'_'+ri);save();renderDay();}
+function toggleExpandRole(di,ri){const k=di+'_'+ri;if(expandedRoles.has(k))expandedRoles.delete(k);else expandedRoles.add(k);renderDay();}
+function updRole(di,ri,field,val){trips[cur].days[di].roles[ri][field]=val;save();}
+function toggleRole(di,ri){trips[cur].days[di].roles[ri].done=!trips[cur].days[di].roles[ri].done;save();renderDay();}
+function saveRole(di,ri){save();toast('Rolê salvo! 🎉');}
+function toggleRoleComment(di,ri){
+  if(expandedRoleComments.has(ri))expandedRoleComments.delete(ri);else expandedRoleComments.add(ri);
+  renderDay();
+  if(expandedRoleComments.has(ri)){setTimeout(()=>{const ta=document.getElementById('rcmt_'+di+'_'+ri);if(ta)ta.focus();},50);}
+}
+function saveRoleComment(di,ri){
+  const ta=document.getElementById('rcmt_'+di+'_'+ri);
+  if(!ta)return;
+  trips[cur].days[di].roles[ri].comment=ta.value.trim();
+  save();
+  if(!ta.value.trim())expandedRoleComments.delete(ri);
+  renderDay();
+  toast('Comentário salvo!');
+}
+function moveRoleToNextDay(di,ri){
+  const trip=trips[cur];
+  if(di>=trip.days.length-1){toast('Não há dia seguinte! 📅');return;}
+  const role=trip.days[di].roles.splice(ri,1)[0];
+  if(!trip.days[di+1].roles)trip.days[di+1].roles=[];
+  trip.days[di+1].roles.push(role);
+  save();expandedRoles.delete(di+'_'+ri);renderDay();
+  toast(`"${role.name||'Rolê'}" movido para o dia ${trip.days[di+1].num} ➡️`);
+}
+function moveRoleToPrevDay(di,ri){
+  const trip=trips[cur];
+  if(di<=0){toast('Não há dia anterior! 📅');return;}
+  const role=trip.days[di].roles.splice(ri,1)[0];
+  if(!trip.days[di-1].roles)trip.days[di-1].roles=[];
+  trip.days[di-1].roles.push(role);
+  save();expandedRoles.delete(di+'_'+ri);renderDay();
+  toast(`"${role.name||'Rolê'}" movido para o dia ${trip.days[di-1].num} ⬅️`);
 }
 function deleteDay(di){const trip=trips[cur];if(trip.days.length<=1){toast('Mínimo 1 dia');return;}if(!confirm('Remover este dia?'))return;trip.days.splice(di,1);trip.days.forEach((d,i)=>d.num=i+1);curDay=Math.min(curDay,trip.days.length-1);save();renderTrip();}
 
@@ -1768,7 +1996,7 @@ async function loadTripsDB(){
   for(const t of merged){
     const{data:drows}=await sb.from('trip_days').select('*').eq('trip_id',t.id).order('day_num');
     t.start=t.start_date;t.end=t.end_date;t.routes=t.routes||[];
-    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:(d.visits||[]).map(v=>({...v,ticketData:v.ticketData||''})),transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[],_openTrKey:d.open_tr_key||null,_notesLocked:localStorage.getItem('nl_'+d.id)==='1'}));
+    t.days=(drows||[]).map(d=>({id:d.id,num:d.day_num,date:d.date,title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:(d.visits||[]).map(v=>({...v,ticketData:v.ticketData||''})),transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[],roles:d.roles||[],_openTrKey:d.open_tr_key||null,_notesLocked:localStorage.getItem('nl_'+d.id)==='1'}));
   }
   trips=merged;
 }
@@ -1783,6 +2011,7 @@ function save(){
     // Strip ticketData from visits/foods before saving to jsonb (stored in trip_attachments)
     const visitsToSave=(day.visits||[]).map(v=>{const c={...v};delete c.ticketData;return c;});
     const foodsToSave=(day.foods||[]).map(f=>{const c={...f};delete c.ticketData;return c;});
+    const rolesHtmlSave=(day.roles||[]).map(r=>{const c={...r};return c;});
     const hotelData=day.hotelAttachData||'';
     sb.from('trip_days').update({
       title:day.title||'',hotel_lat:day.hotelLat||'',hotel_lng:day.hotelLng||'',
@@ -1790,7 +2019,7 @@ function save(){
       hotel_attach_name:day.hotelAttachName||'',hotel_attach_data:hotelData,
       transports:day.transports||[],visits:visitsToSave,
       transfers:day.transfers||[],notes:day.notes||'',open_tr_key:day._openTrKey||'',
-      foods:foodsToSave
+      foods:foodsToSave,roles:rolesHtmlSave
     }).eq('id',day.id)
     .then(({error})=>{if(error){console.error('save error:',error);toast('Erro ao salvar: '+error.message);}});
   },1200);
@@ -1871,7 +2100,7 @@ function saveNotes(){clearTimeout(_nt);_nt=setTimeout(()=>{const c=document.getE
 function subscribeRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
   realtimeSub=sb.channel('rt-'+currentUser.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'trip_days'},payload=>{
-    for(const t of trips){const di=t.days.findIndex(d=>d.id===payload.new.id);if(di>=0){const d=payload.new;t.days[di]={...t.days[di],title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[]};if(cur!==null&&trips[cur]?.id===t.id){
+    for(const t of trips){const di=t.days.findIndex(d=>d.id===payload.new.id);if(di>=0){const d=payload.new;t.days[di]={...t.days[di],title:d.title||'',hotelLat:d.hotel_lat||'',hotelLng:d.hotel_lng||'',hotelLocName:d.hotel_loc_name||'',hotelReserva:d.hotel_reserva||'',hotelAttachName:d.hotel_attach_name||'',hotelAttachData:d.hotel_attach_data||'',transports:d.transports||[],visits:d.visits||[],transfers:d.transfers||[],notes:d.notes||'',foods:d.foods||[],roles:d.roles||[]};if(cur!==null&&trips[cur]?.id===t.id){
           // Don't re-render if user is actively typing in a field
           const active=document.activeElement;
           const isTyping=active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA');
