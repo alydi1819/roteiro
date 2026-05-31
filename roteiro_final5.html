@@ -408,6 +408,38 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .role-route-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-top:8px}
 .role-route-box .rrt-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px}
 
+/* ── MAIS PERTO SCREEN ── */
+.nearby-hero{background:linear-gradient(135deg,#0E3D8B 0%,#1A5FB4 60%,#2563EB 100%);padding:20px 16px 16px;position:relative;overflow:hidden}
+.nearby-hero::after{content:'';position:absolute;right:-20px;top:-20px;width:120px;height:120px;background:rgba(255,255,255,.06);border-radius:50%}
+.nearby-hero h2{color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.nearby-hero p{color:#B5D4F4;font-size:12px;margin-top:3px}
+.nearby-body{padding:14px 16px}
+.nearby-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.nearby-section-hdr{display:flex;align-items:center;gap:9px;padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.nearby-section-hdr .ns-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.nearby-section-hdr .ns-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.2px}
+.nearby-section-hdr .ns-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.nearby-result{padding:13px 14px}
+.nearby-loading{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12px;padding:13px 14px}
+.nearby-loading .spin-sm{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.nearby-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.nearby-item:last-child{border-bottom:none}
+.nearby-item-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.nearby-item-info{flex:1;min-width:0}
+.nearby-item-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nearby-item-meta{font-size:11px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.nearby-dist-badge{background:var(--blue-bg);color:var(--blue2);border:1px solid var(--blue-border);border-radius:20px;font-size:10px;font-weight:700;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+.nearby-dist-badge.close{background:var(--success-bg);color:var(--success);border-color:var(--success-border)}
+.nearby-dist-badge.far{background:var(--orange-bg);color:var(--orange);border-color:var(--orange-border)}
+.nearby-maps-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--blue2);background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:7px;padding:5px 10px;cursor:pointer;white-space:nowrap;text-decoration:none;flex-shrink:0;transition:all .15s}
+.nearby-maps-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.nearby-empty{font-size:12px;color:var(--text3);text-align:center;padding:14px;line-height:1.5}
+.nearby-error{font-size:12px;color:var(--red);padding:13px 14px;display:flex;align-items:center;gap:6px}
+.nearby-loc-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px;color:var(--text2)}
+.nearby-loc-bar i{font-size:15px;color:var(--blue2);flex-shrink:0}
+.nearby-loc-bar .loc-coords{font-size:10px;color:var(--text3);margin-top:1px}
+.nearby-retry-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;margin:10px auto 0;transition:background .15s}
+.nearby-retry-btn:hover{background:var(--blue2)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .auth-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit}
 .auth-tab.active{background:var(--surface);color:var(--blue);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -533,6 +565,57 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <div class="day-content" id="dayContent"></div>
 </div>
 
+<!-- MAIS PERTO SCREEN -->
+<div id="nearbyScreen" class="screen">
+  <div class="nearby-hero">
+    <h2><i class="ti ti-location" style="font-size:20px;color:#FAC775"></i> Mais perto</h2>
+    <p>Encontre o que está mais próximo de você agora</p>
+  </div>
+  <div class="nearby-body">
+    <div class="nearby-loc-bar" id="nearbyLocBar">
+      <i class="ti ti-map-pin"></i>
+      <div style="flex:1"><div id="nearbyLocStatus">Buscando sua localização...</div><div class="loc-coords" id="nearbyLocCoords"></div></div>
+      <button class="nearby-retry-btn" style="margin:0" onclick="initNearby()"><i class="ti ti-refresh" style="font-size:13px"></i></button>
+    </div>
+
+    <!-- Metrô mais perto -->
+    <div class="nearby-section">
+      <div class="nearby-section-hdr">
+        <div class="ns-icon" style="background:var(--metro-bg)"><i class="ti ti-train" style="color:var(--metro)"></i></div>
+        <div><div class="ns-title">Metrô / Trem mais perto</div><div class="ns-sub">Estação mais próxima da sua localização</div></div>
+      </div>
+      <div id="nearbyMetroResult" class="nearby-loading"><div class="spin-sm"></div> Aguardando localização...</div>
+    </div>
+
+    <!-- O que visitar -->
+    <div class="nearby-section">
+      <div class="nearby-section-hdr">
+        <div class="ns-icon" style="background:var(--orange-bg)"><i class="ti ti-building-monument" style="color:var(--orange)"></i></div>
+        <div><div class="ns-title">O que visitar mais perto</div><div class="ns-sub">Atrações de hoje ordenadas por distância</div></div>
+      </div>
+      <div id="nearbyVisitResult" class="nearby-loading"><div class="spin-sm"></div> Aguardando localização...</div>
+    </div>
+
+    <!-- Onde comer -->
+    <div class="nearby-section">
+      <div class="nearby-section-hdr">
+        <div class="ns-icon" style="background:var(--success-bg)"><i class="ti ti-tools-kitchen-2" style="color:var(--success)"></i></div>
+        <div><div class="ns-title">Onde comer mais perto</div><div class="ns-sub">Restaurantes de hoje ordenados por distância</div></div>
+      </div>
+      <div id="nearbyFoodResult" class="nearby-loading"><div class="spin-sm"></div> Aguardando localização...</div>
+    </div>
+
+    <!-- Rolezinho -->
+    <div class="nearby-section">
+      <div class="nearby-section-hdr">
+        <div class="ns-icon" style="background:var(--purple-bg)"><i class="ti ti-confetti" style="color:var(--purple)"></i></div>
+        <div><div class="ns-title">Rolezinho mais perto</div><div class="ns-sub">Programas noturnos de hoje por distância</div></div>
+      </div>
+      <div id="nearbyRoleResult" class="nearby-loading"><div class="spin-sm"></div> Aguardando localização...</div>
+    </div>
+  </div>
+</div>
+
 <!-- SUMMARY SCREEN -->
 <div id="summaryScreen" class="screen">
   <div class="summary-hero" id="summaryHero">
@@ -585,6 +668,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav" id="bottomNav">
   <button class="bn-item active" id="bn-home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
+  <button class="bn-item" id="bn-nearby" onclick="switchTab('nearby')"><i class="ti ti-location"></i><span>Mais perto</span></button>
   <button class="bn-item" id="bn-summary" onclick="switchTab('summary')"><i class="ti ti-layout-list"></i><span>Resumo</span></button>
   <button class="bn-item" id="bn-checklist" onclick="switchTab('checklist')"><i class="ti ti-checkbox"></i><span>Bagagem</span></button>
   <button class="bn-item" id="bn-notes" onclick="switchTab('notes')"><i class="ti ti-notebook"></i><span>Notas</span></button>
@@ -823,11 +907,12 @@ function switchTab(tab){
   curTab=tab;
   // hide trip screen if going to other tabs
   document.getElementById('tripScreen').classList.remove('active');
-  ['home','summary','checklist','notes'].forEach(t=>{
+  ['home','nearby','summary','checklist','notes'].forEach(t=>{
     document.getElementById(t+'Screen').classList.toggle('active',t===tab);
     document.getElementById('bn-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='home')renderHome();
+  else if(tab==='nearby')initNearby();
   else if(tab==='summary')renderSummary();
   else if(tab==='finance')renderFinance();
   else if(tab==='checklist')renderChecklist();
@@ -920,7 +1005,7 @@ function getPrevCity(trip,dayDate){
 }
 function openTrip(i){
   cur=i;curDay=0;expandedVisits=new Set();expandedComments=new Set();
-  ['home','summary','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});
+  ['home','nearby','summary','checklist','notes'].forEach(t=>{document.getElementById(t+'Screen').classList.remove('active');document.getElementById('bn-'+t).classList.remove('active');});
   document.getElementById('tripScreen').classList.add('active');
   renderTrip();
 }
@@ -2163,6 +2248,177 @@ async function startApp(user){
     window._pendingInviteCode=null;
     setTimeout(()=>applyInviteCode(code),1000);
   }
+}
+
+/* ═══════════════════════════════════════════
+   MAIS PERTO
+═══════════════════════════════════════════ */
+let _nearbyPos=null;
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmtDist(m){return m<1000?Math.round(m)+'m':(m/1000).toFixed(1)+'km';}
+function distBadgeClass(m){return m<500?'close':m>3000?'far':'';}
+
+function getTodayTrip(){
+  const today=new Date().toISOString().split('T')[0];
+  for(const t of trips){
+    for(const d of(t.days||[])){if(d.date===today)return{trip:t,day:d};}
+  }
+  // fallback: nearest upcoming day
+  let best=null,bestDiff=Infinity;
+  for(const t of trips){
+    for(const d of(t.days||[])){
+      const diff=Math.abs(new Date(d.date+'T12:00:00')-new Date());
+      if(diff<bestDiff){bestDiff=diff;best={trip:t,day:d};}
+    }
+  }
+  return best;
+}
+
+function parseItemCoords(item){
+  if(!item.lat||!item.lng)return null;
+  if(item.lat==='link'||item.lat==='name')return null;
+  const la=parseFloat(item.lat),lo=parseFloat(item.lng);
+  if(isNaN(la)||isNaN(lo))return null;
+  return{lat:la,lng:lo};
+}
+
+function mapsLink(lat,lng,name){
+  if(lat&&lng&&lat!=='link'&&lat!=='name')return`https://www.google.com/maps?q=${lat},${lng}`;
+  if(lat==='link')return lng;
+  if(lat==='name')return`https://www.google.com/maps/search/${encodeURIComponent(lng)}`;
+  if(name)return`https://www.google.com/maps/search/${encodeURIComponent(name)}`;
+  return null;
+}
+
+function renderNearbyItem(item,distM,mapUrl){
+  const dist=distM!==null?`<span class="nearby-dist-badge ${distBadgeClass(distM)}">${fmtDist(distM)}</span>`:'';
+  const btn=mapUrl?`<a class="nearby-maps-btn" href="${mapUrl}" target="_blank"><i class="ti ti-map" style="font-size:12px"></i> Abrir</a>`:'';
+  return`<div class="nearby-item">
+    <div style="flex:1;min-width:0">
+      <div class="nearby-item-name">${item.name||item.locName||'Sem nome'}</div>
+      <div class="nearby-item-meta">${item.locName&&item.locName!==item.name?`<span>${item.locName}</span>`:''}${dist}</div>
+    </div>${btn}
+  </div>`;
+}
+
+function renderNearbySection(containerId,items,userLat,userLng){
+  const el=document.getElementById(containerId);if(!el)return;
+  if(!items||!items.length){el.innerHTML=`<div class="nearby-empty">Nenhum item com localização salva para hoje.<br>Adicione coordenadas nas atrações do roteiro.</div>`;return;}
+  const withCoords=[];const withoutCoords=[];
+  for(const item of items){
+    const c=parseItemCoords(item);
+    const d=c?haversine(userLat,userLng,c.lat,c.lng):null;
+    const url=mapsLink(item.lat,item.lng,item.name||item.locName);
+    if(d!==null)withCoords.push({item,d,url});
+    else withoutCoords.push({item,d:null,url});
+  }
+  withCoords.sort((a,b)=>a.d-b.d);
+  const all=[...withCoords,...withoutCoords];
+  el.innerHTML=`<div style="padding:4px 14px 4px">`+all.map(({item,d,url})=>renderNearbyItem(item,d,url)).join('')+`</div>`;
+}
+
+async function fetchNearestMetro(lat,lng){
+  const el=document.getElementById('nearbyMetroResult');
+  // Use Overpass API to find nearest metro/train station
+  const query=`[out:json][timeout:10];(node["station"="subway"](around:5000,${lat},${lng});node["railway"="station"](around:5000,${lat},${lng});node["railway"="subway_entrance"](around:3000,${lat},${lng}););out body 10;`;
+  const url=`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+  try{
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('overpass');
+    const data=await r.json();
+    const nodes=(data.elements||[]).filter(n=>n.lat&&n.lon);
+    if(!nodes.length){el.innerHTML=`<div class="nearby-empty">Nenhuma estação encontrada num raio de 5km.<br>Verifique sua localização.</div>`;return;}
+    const withDist=nodes.map(n=>({...n,dist:haversine(lat,lng,n.lat,n.lon)}));
+    withDist.sort((a,b)=>a.dist-b.dist);
+    const top=withDist.slice(0,4);
+    el.innerHTML=`<div style="padding:4px 14px 4px">`+top.map(n=>{
+      const name=n.tags?.name||n.tags?.['name:pt']||'Estação';
+      const line=n.tags?.line||n.tags?.network||n.tags?.operator||'';
+      const url=`https://www.google.com/maps?q=${n.lat},${n.lon}`;
+      return`<div class="nearby-item">
+        <div class="nearby-item-icon" style="background:var(--metro-bg)"><i class="ti ti-train" style="color:var(--metro)"></i></div>
+        <div style="flex:1;min-width:0">
+          <div class="nearby-item-name">${name}</div>
+          <div class="nearby-item-meta">${line?`<span>${line}</span>`:''}<span class="nearby-dist-badge ${distBadgeClass(n.dist)}">${fmtDist(n.dist)}</span></div>
+        </div>
+        <a class="nearby-maps-btn" href="${url}" target="_blank"><i class="ti ti-map" style="font-size:12px"></i> Abrir</a>
+      </div>`;
+    }).join('')+`</div>`;
+  }catch(e){
+    el.innerHTML=`<div class="nearby-error"><i class="ti ti-alert-circle"></i> Não foi possível buscar estações. Verifique sua conexão.</div>`;
+  }
+}
+
+function initNearby(){
+  const locStatus=document.getElementById('nearbyLocStatus');
+  const locCoords=document.getElementById('nearbyLocCoords');
+  ['nearbyMetroResult','nearbyVisitResult','nearbyFoodResult','nearbyRoleResult'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=`<div class="nearby-loading"><div class="spin-sm"></div> Aguardando localização...</div>`;
+  });
+  locStatus.textContent='Buscando sua localização...';
+  locCoords.textContent='';
+  if(!navigator.geolocation){
+    locStatus.textContent='Geolocalização não disponível neste dispositivo.';
+    ['nearbyMetroResult','nearbyVisitResult','nearbyFoodResult','nearbyRoleResult'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.innerHTML=`<div class="nearby-error"><i class="ti ti-alert-circle"></i> Geolocalização não suportada.</div>`;
+    });
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude:lat,longitude:lng}=pos.coords;
+    _nearbyPos={lat,lng};
+    locStatus.textContent='Localização obtida ✓';
+    locCoords.textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+    // Metro
+    fetchNearestMetro(lat,lng);
+
+    // Today's trip data
+    const td=getTodayTrip();
+    const today=new Date().toISOString().split('T')[0];
+    const dateLabel=td&&td.day.date===today?'hoje':(td?`dia ${fmtShort(td.day.date)}`:'nenhuma viagem');
+
+    // Visits
+    const visitEl=document.getElementById('nearbyVisitResult');
+    if(td&&td.day.visits&&td.day.visits.length){
+      renderNearbySection('nearbyVisitResult',td.day.visits,lat,lng);
+    } else {
+      visitEl.innerHTML=`<div class="nearby-empty">Sem atrações no roteiro de ${dateLabel}.</div>`;
+    }
+
+    // Foods
+    const foodEl=document.getElementById('nearbyFoodResult');
+    if(td&&td.day.foods&&td.day.foods.length){
+      renderNearbySection('nearbyFoodResult',td.day.foods,lat,lng);
+    } else {
+      foodEl.innerHTML=`<div class="nearby-empty">Sem opções de alimentação no roteiro de ${dateLabel}.</div>`;
+    }
+
+    // Roles (rolezinhos)
+    const roleEl=document.getElementById('nearbyRoleResult');
+    if(td&&td.day.roles&&td.day.roles.length){
+      renderNearbySection('nearbyRoleResult',td.day.roles,lat,lng);
+    } else {
+      roleEl.innerHTML=`<div class="nearby-empty">Sem rolezinhos no roteiro de ${dateLabel}.</div>`;
+    }
+  },err=>{
+    let msg='Permissão de localização negada.';
+    if(err.code===2)msg='Localização indisponível. Tente novamente.';
+    if(err.code===3)msg='Tempo esgotado ao buscar localização.';
+    locStatus.textContent=msg;
+    ['nearbyMetroResult','nearbyVisitResult','nearbyFoodResult','nearbyRoleResult'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML=`<div class="nearby-error"><i class="ti ti-alert-circle"></i> ${msg}</div><button class="nearby-retry-btn" onclick="initNearby()"><i class="ti ti-refresh" style="font-size:13px"></i> Tentar novamente</button>`;
+    });
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 }
 
 sb.auth.onAuthStateChange((event,session)=>{
