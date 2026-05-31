@@ -815,24 +815,82 @@ function buildLocSearch(fieldId,savedLat,savedLng,savedName){
     </div>`}
   </div>`;
 }
-function saveLocLink(fieldId){
+const EDGE_RESOLVE_URL='https://xeerqiehnmxiifzguugt.supabase.co/functions/v1/quick-handler';
+
+function applyLocLink(fieldId,lat,lng,locName){
+  const parts=fieldId.split('_');const type=parts[0];
+  if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
+  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
+  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].foods[fi].name)trips[cur].days[di].foods[fi].name=locName;save();renderDay();}
+  else if(type==='role'){const di=parseInt(parts[1]),ri=parseInt(parts[2]);trips[cur].days[di].roles[ri].lat=lat;trips[cur].days[di].roles[ri].lng=lng;trips[cur].days[di].roles[ri].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].roles[ri].name)trips[cur].days[di].roles[ri].name=locName;save();renderDay();}
+}
+
+async function nominatimSearch(name){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
+    const data=await r.json();
+    if(data&&data.length){return{lat:data[0].lat,lng:data[0].lon,locName:data[0].display_name.split(',').slice(0,2).join(', ')};}
+  }catch{}
+  return null;
+}
+
+async function saveLocLink(fieldId){
   const inp=document.getElementById('lsi_'+fieldId);
   if(!inp)return;
   const raw=inp.value.trim();
   if(!raw){toast('Cole o link ou digite o nome do lugar');return;}
+
+  // Disable button while resolving
+  const btn=inp.parentElement?.querySelector('.loc-save-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></div>';}
+
   let lat=null,lng=null,locName=null;
-  if(raw.startsWith('http')){
-    const patterns=[/@(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,/ll=(-?\d+\.\d+),(-?\d+\.\d+)/];
-    for(const p of patterns){const m=raw.match(p);if(m){lat=m[1];lng=m[2];break;}}
-    const pm=raw.match(/place\/([^/@?]+)/)||raw.match(/[?&]q=([^&@]+)/)||raw.match(/search\?q=([^&@]+)/);
+
+  if(!raw.startsWith('http')){
+    // Plain text name — search Nominatim directly
+    const r=await nominatimSearch(raw);
+    if(r){lat=r.lat;lng=r.lng;locName=r.locName||raw;}
+    else{lat='name';lng=raw;locName=raw;}
+    applyLocLink(fieldId,lat,lng,locName);
+    toast('Localização salva! 📍');
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
+    return;
+  }
+
+  // It's a URL — try to extract coords directly first (desktop Maps links)
+  const coordPatterns=[/@(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,/ll=(-?\d+\.\d+),(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/];
+  for(const p of coordPatterns){const m=raw.match(p);if(m){lat=m[1];lng=m[2];break;}}
+
+  if(lat){
+    // Got coords directly from URL
+    const pm=raw.match(/place\/([^/@?]+)/)||raw.match(/[?&]q=([^&@]+)/);
     if(pm){const n=decodeURIComponent(pm[1].replace(/\+/g,' ')).replace(/,.*$/,'').trim();if(n&&n.length>2&&!/^-?\d/.test(n))locName=n;}
-    if(!lat){lat='link';lng=raw;locName=locName||'Localização salva';}
-  } else {lat='name';lng=raw;locName=raw;}
-  const parts=fieldId.split('_');const type=parts[0];
-  if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
-  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
-  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].foods[fi].name){trips[cur].days[di].foods[fi].name=locName;}save();renderDay();}
-  toast('Localização salva!');
+    locName=locName||'Localização salva';
+  } else {
+    // Short link (maps.app.goo.gl) — call Edge Function to resolve
+    toast('Resolvendo link... ⏳',4000);
+    try{
+      const res=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:raw})});
+      const data=await res.json();
+      if(data.lat&&data.lng){
+        lat=data.lat;lng=data.lng;locName=data.name||'Localização salva';
+      } else if(data.name){
+        // Got a name but no coords — try Nominatim
+        const nr=await nominatimSearch(data.name);
+        if(nr){lat=nr.lat;lng=nr.lng;locName=data.name;}
+        else{lat='name';lng=data.name;locName=data.name;}
+      } else {
+        // Nothing extracted — save as link fallback
+        lat='link';lng=raw;locName='Localização salva';
+      }
+    }catch{
+      lat='link';lng=raw;locName='Localização salva';
+    }
+  }
+
+  applyLocLink(fieldId,lat,lng,locName);
+  toast('Localização salva! 📍');
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
 }
 function clearLocLink(fieldId){
   const parts=fieldId.split('_');const type=parts[0];
@@ -2343,8 +2401,10 @@ async function fetchNearestMetro(lat,lng){
     function normName(s){
       return s.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-        .replace(/^(estacao|estação|station|metro|metrô|trem|cptm)\s+/i,'')
-        .replace(/\s+(station|metro|metrô)$/i,'')
+        .replace(/^(estacao|estacao|station|metro|metro|trem|cptm)\s+/i,'')
+        .replace(/\s+(station|metro|metro)$/i,'')
+        .replace(/\s*-\s*/g,'-')
+        .replace(/\s+/g,' ')
         .trim();
     }
     // deduplicate by normalized name, keeping closest node per name
