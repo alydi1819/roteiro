@@ -467,7 +467,51 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 </div>
 
 <!-- AUTH -->
-<div id="authScreen" style="display:none;min-height:100vh;background:linear-gradient(160deg,#0E3D8B,#1A5FB4 50%,#2E7FD9);flex-direction:column;align-items:center;justify-content:center;padding:24px">
+<div id="authScreen" style="display:none;min-height:100vh;background:linear-gradient(160deg,#0E3D8B,#1A5FB4 50%,#2E7FD9);flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden">
+
+  <!-- Clouds -->
+  <style>
+    .auth-cloud{position:absolute;background:rgba(255,255,255,0.07);border-radius:50%;pointer-events:none}
+    .auth-cloud::before,.auth-cloud::after{content:'';position:absolute;background:inherit;border-radius:50%}
+    @keyframes cloud-drift{0%{transform:translateX(0)}100%{transform:translateX(60px)}}
+    @keyframes cloud-drift-r{0%{transform:translateX(0)}100%{transform:translateX(-50px)}}
+  </style>
+
+  <!-- Cloud 1 — top left, large, very slow -->
+  <div class="auth-cloud" style="width:220px;height:70px;top:6%;left:-40px;animation:cloud-drift 22s ease-in-out infinite alternate;opacity:.09">
+    <div style="position:absolute;width:90px;height:90px;background:rgba(255,255,255,.07);border-radius:50%;top:-40px;left:30px"></div>
+    <div style="position:absolute;width:65px;height:65px;background:rgba(255,255,255,.07);border-radius:50%;top:-28px;left:90px"></div>
+  </div>
+
+  <!-- Cloud 2 — upper right, medium -->
+  <div class="auth-cloud" style="width:160px;height:50px;top:13%;right:-20px;animation:cloud-drift-r 18s ease-in-out infinite alternate;opacity:.07">
+    <div style="position:absolute;width:70px;height:70px;background:rgba(255,255,255,.07);border-radius:50%;top:-32px;left:20px"></div>
+    <div style="position:absolute;width:50px;height:50px;background:rgba(255,255,255,.07);border-radius:50%;top:-22px;left:75px"></div>
+  </div>
+
+  <!-- Cloud 3 — mid left, small, faster -->
+  <div class="auth-cloud" style="width:130px;height:40px;top:38%;left:-10px;animation:cloud-drift 14s ease-in-out infinite alternate;opacity:.06">
+    <div style="position:absolute;width:55px;height:55px;background:rgba(255,255,255,.06);border-radius:50%;top:-25px;left:15px"></div>
+    <div style="position:absolute;width:40px;height:40px;background:rgba(255,255,255,.06);border-radius:50%;top:-18px;left:60px"></div>
+  </div>
+
+  <!-- Cloud 4 — mid right, large, slowest -->
+  <div class="auth-cloud" style="width:250px;height:75px;top:52%;right:-50px;animation:cloud-drift-r 26s ease-in-out infinite alternate;opacity:.08">
+    <div style="position:absolute;width:100px;height:100px;background:rgba(255,255,255,.07);border-radius:50%;top:-48px;left:35px"></div>
+    <div style="position:absolute;width:75px;height:75px;background:rgba(255,255,255,.07);border-radius:50%;top:-35px;left:110px"></div>
+  </div>
+
+  <!-- Cloud 5 — bottom left, medium -->
+  <div class="auth-cloud" style="width:180px;height:55px;bottom:12%;left:-30px;animation:cloud-drift 20s ease-in-out infinite alternate;opacity:.07">
+    <div style="position:absolute;width:80px;height:80px;background:rgba(255,255,255,.07);border-radius:50%;top:-38px;left:25px"></div>
+    <div style="position:absolute;width:55px;height:55px;background:rgba(255,255,255,.07);border-radius:50%;top:-26px;left:90px"></div>
+  </div>
+
+  <!-- Cloud 6 — bottom right, small -->
+  <div class="auth-cloud" style="width:120px;height:38px;bottom:22%;right:-10px;animation:cloud-drift-r 16s ease-in-out infinite alternate;opacity:.06">
+    <div style="position:absolute;width:50px;height:50px;background:rgba(255,255,255,.06);border-radius:50%;top:-22px;left:12px"></div>
+    <div style="position:absolute;width:38px;height:38px;background:rgba(255,255,255,.06);border-radius:50%;top:-16px;left:55px"></div>
+  </div>
   <div style="color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:6px">
     <i class="ti ti-compass" style="font-size:30px;color:#FAC775"></i> Roteiro
   </div>
@@ -817,19 +861,25 @@ function buildLocSearch(fieldId,savedLat,savedLng,savedName){
 }
 const EDGE_RESOLVE_URL='https://xeerqiehnmxiifzguugt.supabase.co/functions/v1/quick-handler';
 
-function applyLocLink(fieldId,lat,lng,locName){
+function applyLocLink(fieldId,lat,lng,locName,placeName){
+  // placeName = clean name to fill the title field (e.g. "Museu do Ipiranga")
+  // locName   = label shown in the saved bar (can be same or a short address)
+  const pn=placeName||locName;
   const parts=fieldId.split('_');const type=parts[0];
   if(type==='hotel'){const di=parseInt(parts[1]);trips[cur].days[di].hotelLat=lat;trips[cur].days[di].hotelLng=lng;trips[cur].days[di].hotelLocName=locName||'Hotel salvo';save();renderDay();}
-  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].visits[vi].name)trips[cur].days[di].visits[vi].name=locName;save();renderDay();}
-  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].foods[fi].name)trips[cur].days[di].foods[fi].name=locName;save();renderDay();}
-  else if(type==='role'){const di=parseInt(parts[1]),ri=parseInt(parts[2]);trips[cur].days[di].roles[ri].lat=lat;trips[cur].days[di].roles[ri].lng=lng;trips[cur].days[di].roles[ri].locName=locName||'Local salvo';if(locName&&locName!=='Localização salva'&&locName!=='Local salvo'&&!trips[cur].days[di].roles[ri].name)trips[cur].days[di].roles[ri].name=locName;save();renderDay();}
+  else if(type==='visit'){const di=parseInt(parts[1]),vi=parseInt(parts[2]);trips[cur].days[di].visits[vi].lat=lat;trips[cur].days[di].visits[vi].lng=lng;trips[cur].days[di].visits[vi].locName=locName||'Local salvo';if(pn&&pn!=='Localização salva'&&pn!=='Local salvo')trips[cur].days[di].visits[vi].name=pn;save();renderDay();}
+  else if(type==='food'){const di=parseInt(parts[1]),fi=parseInt(parts[2]);trips[cur].days[di].foods[fi].lat=lat;trips[cur].days[di].foods[fi].lng=lng;trips[cur].days[di].foods[fi].locName=locName||'Local salvo';if(pn&&pn!=='Localização salva'&&pn!=='Local salvo')trips[cur].days[di].foods[fi].name=pn;save();renderDay();}
+  else if(type==='role'){const di=parseInt(parts[1]),ri=parseInt(parts[2]);trips[cur].days[di].roles[ri].lat=lat;trips[cur].days[di].roles[ri].lng=lng;trips[cur].days[di].roles[ri].locName=locName||'Local salvo';if(pn&&pn!=='Localização salva'&&pn!=='Local salvo')trips[cur].days[di].roles[ri].name=pn;save();renderDay();}
 }
 
 async function nominatimSearch(name){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`,{headers:{'Accept-Language':'pt-BR,pt'}});
     const data=await r.json();
-    if(data&&data.length){return{lat:data[0].lat,lng:data[0].lon,locName:data[0].display_name.split(',').slice(0,2).join(', ')};}
+    if(data&&data.length){
+      const shortAddr=data[0].display_name.split(',').slice(0,2).join(', ');
+      return{lat:data[0].lat,lng:data[0].lon,locName:shortAddr};
+    }
   }catch{}
   return null;
 }
@@ -840,55 +890,57 @@ async function saveLocLink(fieldId){
   const raw=inp.value.trim();
   if(!raw){toast('Cole o link ou digite o nome do lugar');return;}
 
-  // Disable button while resolving
   const btn=inp.parentElement?.querySelector('.loc-save-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite"></div>';}
 
-  let lat=null,lng=null,locName=null;
+  let lat=null,lng=null,locName=null,placeName=null;
 
   if(!raw.startsWith('http')){
-    // Plain text name — search Nominatim directly
+    // Plain text — use as name and search Nominatim for coords
+    placeName=raw;
     const r=await nominatimSearch(raw);
     if(r){lat=r.lat;lng=r.lng;locName=r.locName||raw;}
     else{lat='name';lng=raw;locName=raw;}
-    applyLocLink(fieldId,lat,lng,locName);
+    applyLocLink(fieldId,lat,lng,locName,placeName);
     toast('Localização salva! 📍');
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
     return;
   }
 
-  // It's a URL — try to extract coords directly first (desktop Maps links)
+  // URL — try to extract coords + name directly (desktop Maps links)
   const coordPatterns=[/@(-?\d+\.\d+),(-?\d+\.\d+)/,/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,/ll=(-?\d+\.\d+),(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/];
   for(const p of coordPatterns){const m=raw.match(p);if(m){lat=m[1];lng=m[2];break;}}
 
+  // Always try to extract place name from URL
+  const pm=raw.match(/place\/([^/@?]+)/)||raw.match(/[?&]q=([^&@]+)/)||raw.match(/search\?q=([^&@]+)/);
+  if(pm){const n=decodeURIComponent(pm[1].replace(/\+/g,' ')).replace(/,.*$/,'').trim();if(n&&n.length>2&&!/^-?\d/.test(n))placeName=n;}
+
   if(lat){
-    // Got coords directly from URL
-    const pm=raw.match(/place\/([^/@?]+)/)||raw.match(/[?&]q=([^&@]+)/);
-    if(pm){const n=decodeURIComponent(pm[1].replace(/\+/g,' ')).replace(/,.*$/,'').trim();if(n&&n.length>2&&!/^-?\d/.test(n))locName=n;}
-    locName=locName||'Localização salva';
+    locName=placeName||'Localização salva';
   } else {
-    // Short link (maps.app.goo.gl) — call Edge Function to resolve
+    // Short link — call Edge Function
     toast('Resolvendo link... ⏳',4000);
     try{
       const res=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:raw})});
       const data=await res.json();
       if(data.lat&&data.lng){
-        lat=data.lat;lng=data.lng;locName=data.name||'Localização salva';
+        lat=data.lat;lng=data.lng;
+        placeName=placeName||data.name||null;
+        locName=placeName||'Localização salva';
       } else if(data.name){
-        // Got a name but no coords — try Nominatim
+        placeName=placeName||data.name;
         const nr=await nominatimSearch(data.name);
-        if(nr){lat=nr.lat;lng=nr.lng;locName=data.name;}
+        if(nr){lat=nr.lat;lng=nr.lng;locName=nr.locName||data.name;}
         else{lat='name';lng=data.name;locName=data.name;}
       } else {
-        // Nothing extracted — save as link fallback
-        lat='link';lng=raw;locName='Localização salva';
+        lat='link';lng=raw;locName=placeName||'Localização salva';
       }
     }catch{
-      lat='link';lng=raw;locName='Localização salva';
+      lat='link';lng=raw;locName=placeName||'Localização salva';
     }
   }
 
-  applyLocLink(fieldId,lat,lng,locName);
+  applyLocLink(fieldId,lat,lng,locName,placeName);
   toast('Localização salva! 📍');
   if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check" style="font-size:14px"></i> Salvar';}
 }
@@ -2366,18 +2418,30 @@ function renderNearbyItem(item,distM,mapUrl){
   </div>`;
 }
 
-function renderNearbySection(containerId,items,userLat,userLng){
+async function resolveItemCoords(item){
+  // Already has real coords
+  const c=parseItemCoords(item);
+  if(c)return c;
+  // Has a name or locName — try Nominatim
+  const query=item.name||item.locName||null;
+  if(!query||query==='Localização salva'||query==='Local salvo')return null;
+  const r=await nominatimSearch(query);
+  if(r)return{lat:parseFloat(r.lat),lng:parseFloat(r.lng)};
+  return null;
+}
+
+async function renderNearbySection(containerId,items,userLat,userLng){
   const el=document.getElementById(containerId);if(!el)return;
   if(!items||!items.length){el.innerHTML=`<div class="nearby-empty">Nenhum item com localização salva para hoje.<br>Adicione coordenadas nas atrações do roteiro.</div>`;return;}
-  const withCoords=[];const withoutCoords=[];
-  for(const item of items){
-    const c=parseItemCoords(item);
+  el.innerHTML=`<div class="nearby-loading"><div class="spin-sm"></div> Calculando distâncias...</div>`;
+  const resolved=await Promise.all(items.map(async item=>{
+    const c=await resolveItemCoords(item);
     const d=c?haversine(userLat,userLng,c.lat,c.lng):null;
     const url=mapsLink(item.lat,item.lng,item.name||item.locName);
-    if(d!==null)withCoords.push({item,d,url});
-    else withoutCoords.push({item,d:null,url});
-  }
-  withCoords.sort((a,b)=>a.d-b.d);
+    return{item,d,url};
+  }));
+  const withCoords=resolved.filter(x=>x.d!==null).sort((a,b)=>a.d-b.d);
+  const withoutCoords=resolved.filter(x=>x.d===null);
   const all=[...withCoords,...withoutCoords];
   el.innerHTML=`<div style="padding:4px 14px 4px">`+all.map(({item,d,url})=>renderNearbyItem(item,d,url)).join('')+`</div>`;
 }
