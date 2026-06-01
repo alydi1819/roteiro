@@ -849,7 +849,7 @@ function toggleTheme(){
    LOCATION WIDGET
 ═══════════════════════════════════════════ */
 const GOOGLE_PLACES_KEY='AIzaSyAEhLAcEaqSmHlm9kWYBNq8S038Vofgf68';
-let _acTimer=null;
+const PLACES_PROXY='https://places-proxy.alydi1819.workers.dev';
 const _acSessions={};
 
 function buildLocSearch(fieldId,savedLat,savedLng,savedName){
@@ -892,7 +892,7 @@ async function acInput(fieldId){
     box.style.display='block';
     box.innerHTML=`<div class="loc-ac-item"><i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i><div class="loc-ac-name">Buscando...</div></div>`;
     try{
-      const r=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'autocomplete',input:val})});
+      const r=await fetch(PLACES_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'autocomplete',input:val})});
       const data=await r.json();
       const predictions=data.predictions||[];
       if(!predictions.length){box.innerHTML=`<div class="loc-ac-item" style="color:var(--text3)"><i class="ti ti-map-off"></i><div class="loc-ac-name">Nenhum resultado encontrado</div></div>`;return;}
@@ -919,7 +919,7 @@ async function acSelect(fieldId,placeId,encodedName,encodedAddr){
   if(inp)inp.value=name;
   if(box)box.style.display='none';
   try{
-    const r=await fetch(EDGE_RESOLVE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'details',place_id:placeId})});
+    const r=await fetch(PLACES_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'details',place_id:placeId})});
     const data=await r.json();
     const lat=data.result?.geometry?.location?.lat;
     const lng=data.result?.geometry?.location?.lng;
