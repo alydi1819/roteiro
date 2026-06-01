@@ -850,6 +850,7 @@ function toggleTheme(){
 ═══════════════════════════════════════════ */
 const GOOGLE_PLACES_KEY='AIzaSyAEhLAcEaqSmHlm9kWYBNq8S038Vofgf68';
 const PLACES_PROXY='https://places-proxy.alydi1819.workers.dev';
+let _acTimer=null;
 const _acSessions={};
 
 function buildLocSearch(fieldId,savedLat,savedLng,savedName){
